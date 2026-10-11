@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⚔️ جنگ جهانی آنلاین</title>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d1117;--panel:#161b22;--panel2:#1c2430;--line:#2b3441;--txt:#e6edf3;--muted:#8b949e;--green:#3fb950;--red:#f85149;--gold:#e3b341;--blue:#58a6ff}
+body{font-family:Tahoma,system-ui,sans-serif;background:radial-gradient(circle at 50% 0%,#16202c,#0d1117 70%);color:var(--txt);min-height:100vh;padding-bottom:40px}
+.screen{display:none}.screen.active{display:block}.hidden{display:none!important}
+#screen-auth{display:none;place-items:center;min-height:100vh;padding:20px}
+#screen-auth.active{display:grid}
+.auth-box{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px;text-align:center;box-shadow:0 20px 60px #0008}
+.auth-box h1{font-size:22px;margin-bottom:6px}
+.auth-box .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+#authForm{display:flex;flex-direction:column;gap:10px}
+#authForm input{padding:12px;border-radius:10px;border:1px solid var(--line);background:#0d1117;color:var(--txt);font-family:inherit;font-size:14px;text-align:center}
+#authForm button{padding:12px;border-radius:10px;border:none;background:var(--green);color:#04150a;font-weight:bold;font-size:15px;cursor:pointer;font-family:inherit}
+.error{color:var(--red);font-size:13px;min-height:18px;margin-top:10px}
+#screen-country{padding:24px 16px;max-width:1100px;margin:0 auto}
+#screen-country h2{text-align:center;margin-bottom:6px}
+#screen-country .lead{text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px}
+.country-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.country-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 8px;text-align:center;cursor:pointer;transition:.15s;position:relative}
+.country-card:hover{border-color:var(--green);transform:translateY(-2px)}
+.country-card.taken{opacity:.85;cursor:not-allowed;background:repeating-linear-gradient(135deg,#2a1518,#2a1518 8px,#221013 8px,#221013 16px);border-color:var(--red)}
+.country-card.taken:hover{border-color:var(--red);transform:none}
+.country-card.taken .flag{filter:grayscale(70%)}
+.country-card .lock-badge{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;font-weight:bold}
+.country-card .flag{font-size:30px;display:block}
+.country-card .name{font-size:13px;margin-top:6px}
+.country-card .owner{font-size:11px;color:var(--gold);margin-top:4px;background:#0009;padding:2px 4px;border-radius:6px;display:inline-block}
+#screen-game{max-width:1100px;margin:0 auto;padding:14px}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:14px}
+.brand{font-weight:bold;font-size:16px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13px}
+.stat b{color:var(--gold)}.stat.green b{color:var(--green)}
+.spacer{flex:1}
+.logout{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:6px 12px;cursor:pointer;font-family:inherit;font-size:13px}
+nav.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:12px}
+nav.tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:9px 15px;border-radius:10px;cursor:pointer;white-space:nowrap;font-family:inherit;font-size:13.5px}
+nav.tabs button.active{background:var(--green);color:#04150a;border-color:var(--green);font-weight:bold}
+nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;margin-right:5px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.card h3{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.muted{color:var(--muted);font-size:12.5px}
+.income-box{background:linear-gradient(135deg,#1b2a1f,#16241a);border:1px solid #2c4a35;border-radius:12px;padding:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.income-box .ico{font-size:30px}
+.income-box .info{flex:1;min-width:180px}
+.income-box .lbl{font-size:12px;color:var(--muted)}
+.income-box .val{font-size:20px;color:var(--green);font-weight:bold;margin-top:3px}
+.income-box .next{font-size:12px;color:var(--muted);margin-top:5px}
+.cat-header{display:flex;align-items:center;gap:8px;margin:18px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:14.5px;font-weight:bold;color:var(--blue)}
+.cat-header:first-child{margin-top:0}
+.cat-header .count{background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:1px 9px;font-size:11.5px;font-weight:normal}
+.item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.item .emoji{font-size:26px;width:38px;text-align:center}
+.item .info{flex:1;min-width:0}
+.item .info .n{font-size:14px}
+.item .info .d{font-size:12px;color:var(--muted);margin-top:3px}
+.item .info .p{font-size:12.5px;color:var(--gold);margin-top:4px}
+.item .info .p .inc{color:var(--green);margin-right:8px}
+.item .info .p .atk{color:var(--red);margin-right:8px}
+.item .info .p .def{color:var(--blue);margin-right:8px}
+.item .buy{display:flex;gap:6px;align-items:center}
+.item input[type=number]{width:64px;padding:7px;border-radius:8px;border:1px solid var(--line);background:#0d1117;color:var(--txt);font-family:inherit;text-align:center}
+.btn{background:var(--green);color:#04150a;border:none;border-radius:9px;padding:8px 14px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:bold}
+.btn:hover{filter:brightness(1.1)}
+.btn.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line);font-weight:normal}
+.btn.danger{background:var(--red);color:#fff}
+.btn.blue{background:var(--blue);color:#04121f}
+.btn.small{padding:5px 10px;font-size:12px}
+.player{display:flex;align-items:center;gap:10px;padding:11px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;margin-bottom:8px}
+.player .dot{width:9px;height:9px;border-radius:50%;background:#555}
+.player .dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.player .pinfo{flex:1;min-width:0}
+.player .pname{font-size:13.5px}
+.player .pmeta{font-size:11.5px;color:var(--muted);margin-top:3px}
+.player .actions{display:flex;gap:6px;flex-wrap:wrap}
+#chatBox{height:400px;overflow-y:auto;background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.msg{background:var(--panel2);border-radius:10px;padding:9px 12px;font-size:13px;white-space:pre-wrap;line-height:1.7;border-right:3px solid var(--line)}
+.msg.attack{border-right-color:var(--red);background:#2a1416}
+.msg.defense{border-right-color:var(--blue);background:#0f1e2e}
+.msg.result{border-right-color:var(--gold);background:#241f10}
+.msg.ally{border-right-color:var(--green);background:#0f2117}
+.msg.income{border-right-color:#2ecc71;background:#0f2419}
+.msg .who{color:var(--blue);font-weight:bold;font-size:12px}
+#chatForm{display:flex;gap:8px}
+#chatForm input{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:#0d1117;color:var(--txt);font-family:inherit}
+.notif{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;border-right:3px solid var(--line)}
+.notif.unread{border-right-color:var(--gold);background:#1e1a10}
+.notif.attack{border-right-color:var(--red)}
+.notif.alliance{border-right-color:var(--green)}
+.notif.income{border-right-color:#2ecc71}
+.notif .txt{font-size:13.5px;line-height:1.7}
+.notif .time{font-size:11px;color:var(--muted);margin-top:6px}
+.notif .acts{display:flex;gap:8px;margin-top:10px}
+.overlay{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:16px;z-index:100}
+.overlay.active{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto}
+.modal h3{margin-bottom:4px}
+.modal .modal-cat{font-size:12.5px;color:var(--blue);font-weight:bold;margin:14px 0 6px}
+.modal .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.modal .row .nm{flex:1;min-width:0}
+.modal .row .nm .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.modal .row input{width:70px;padding:7px;border-radius:8px;border:1px solid var(--line);background:#0d1117;color:var(--txt);font-family:inherit;text-align:center}
+.modal .power{margin:14px 0;font-size:15px}
+.modal .power b{color:var(--red);font-size:18px}
+.modal .power.def b{color:var(--blue)}
+.modal-actions{display:flex;gap:8px;margin-top:14px}
+#toast{position:fixed;bottom:20px;right:50%;transform:translateX(50%) translateY(120px);background:var(--red);color:#fff;padding:12px 22px;border-radius:12px;font-size:13.5px;transition:.3s;z-index:200;max-width:90vw;text-align:center}
+#toast.show{transform:translateX(50%) translateY(0)}
+#toast.ok{background:var(--green);color:#04150a}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.inv-item{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px;text-align:center}
+.inv-item .e{font-size:24px}
+.inv-item .n{font-size:12.5px;margin-top:4px}
+.inv-item .c{font-size:17px;color:var(--gold);font-weight:bold;margin-top:3px}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:20px}
+#connStatus{font-size:12px;padding:4px 10px;border-radius:20px;background:#333}
+#connStatus.ok{background:var(--green);color:#04150a}
+#connStatus.err{background:var(--red);color:#fff}
+</style>
+</head>
+<body>
+<div id="screen-auth" class="screen active">
+<div class="auth-box">
+<h1>⚔️ جنگ جهانی آنلاین</h1>
+<p class="sub">اسمت رو بنویس و وارد شو</p>
+<form id="authForm" autocomplete="off">
+<input id="inpUser" placeholder="اسم بازیکن..." autocomplete="off" required>
+<button type="submit">شروع بازی</button>
+</form>
+<div id="authError" class="error"></div>
+</div>
+</div>
+<div id="screen-country" class="screen">
+<h2>🌍 کشورت را انتخاب کن</h2>
+<p class="lead">موجودی اولیه‌ات <b>۱۶٬۰۰۰ میلیارد</b> است. کشورهای قفل‌شده توسط بازیکنان دیگر انتخاب شده‌اند.</p>
+<div id="countryGrid" class="country-grid"></div>
+</div>
+<div id="screen-game" class="screen">
+<header class="top">
+<div class="brand">⚔️ جنگ جهانی</div>
+<span id="connStatus">در حال اتصال...</span>
+<div class="stat">👤 <b id="hUser">-</b></div>
+<div class="stat">💰 <b id="hMoney">0</b></div>
+<div class="stat green">📈 <b id="hDailyIncome">0</b> / روز</div>
+<div class="stat">🏳️ <b id="hCountry">-</b></div>
+<div class="spacer"></div>
+<button class="logout" id="btnLogout">تغییر بازیکن</button>
+</header>
+<nav class="tabs">
+<button data-tab="home" class="active">🏠 خانه</button>
+<button data-tab="market">🛒 بازار</button>
+<button data-tab="war">⚔️ جنگ</button>
+<button data-tab="chat">💬 چت</button>
+<button data-tab="notif">🔔 اعلان‌ها <span id="notifBadge" class="badge hidden">0</span></button>
+</nav>
+<div class="tab-panel active" id="tab-home">
+<div class="card">
+<h3>💵 درآمد روزانه</h3>
+<div class="income-box">
+<div class="ico">📈</div>
+<div class="info">
+<div class="lbl">درآمد کل در هر روز</div>
+<div class="val" id="incomeTotal">۰</div>
+<div class="next" id="incomeNext">-</div>
+</div>
+</div>
+</div>
+<div class="card">
+<h3>🏠 کشورهای من</h3>
+<div id="homeTerritories" class="grid2"></div>
+</div>
+<div class="card">
+<h3>📦 وسایل موجود</h3>
+<div id="homeInventory"></div>
+</div>
+</div>
+<div class="tab-panel" id="tab-market">
+<div class="card">
+<h3>🛒 بازار</h3>
+<div id="marketList"></div>
+</div>
+</div>
+<div class="tab-panel" id="tab-war">
+<div class="card">
+<h3>⚔️ بازیکنان آنلاین</h3>
+<div id="warPlayers"></div>
+</div>
+</div>
+<div class="tab-panel" id="tab-chat">
+<div class="card">
+<h3>💬 چت جهانی</h3>
+<div id="chatBox"></div>
+<form id="chatForm">
+<input id="chatInput" placeholder="پیام..." autocomplete="off">
+<button type="submit" class="btn">ارسال</button>
+</form>
+</div>
+</div>
+<div class="tab-panel" id="tab-notif">
+<div class="card">
+<h3>🔔 اعلان‌ها</h3>
+<div id="notifList"></div>
+</div>
+</div>
+</div>
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+<script>
+const SERVER_URL='https://war-game-server-ifnr.onrender.com';
+const CATEGORIES=[
+{id:'income',name:'منابع درآمد',emoji:'💵'},
+{id:'missile',name:'موشک‌ها',emoji:'🚀'},
+{id:'tank',name:'تانک‌ها',emoji:'🚜'},
+{id:'infantry',name:'پیاده‌نظام',emoji:'🪖'},
+{id:'navy',name:'ناوها',emoji:'🚢'},
+{id:'defense',name:'پدافند و دفاع',emoji:'🛡️'}
+];
+const ITEMS=[
+{id:'farm',cat:'income',name:'مزرعه بزرگ',emoji:'🌾',desc:'ارزان',price:1000,attack:0,defense:0,dailyIncome:2500},
+{id:'oil_small',cat:'income',name:'چاه نفت کوچک',emoji:'🛢️',desc:'درآمد بالا',price:1500,attack:0,defense:0,dailyIncome:2800},
+{id:'mine',cat:'income',name:'معدن طلا',emoji:'⛏️',desc:'پایدار',price:1800,attack:0,defense:0,dailyIncome:3200},
+{id:'tourism',cat:'income',name:'مرکز گردشگری',emoji:'🏖️',desc:'خوب',price:2200,attack:0,defense:0,dailyIncome:3800},
+{id:'gas',cat:'income',name:'میدان گاز',emoji:'💨',desc:'خیلی خوب',price:2500,attack:0,defense:0,dailyIncome:4200},
+{id:'oil_big',cat:'income',name:'پالایشگاه',emoji:'🏭',desc:'عالی',price:3500,attack:0,defense:0,dailyIncome:6000},
+{id:'tech',cat:'income',name:'مرکز فناوری',emoji:'💻',desc:'پرسودترین',price:4500,attack:0,defense:0,dailyIncome:8000},
+{id:'mis_short',cat:'missile',name:'موشک کوتاه‌برد',emoji:'🚀',desc:'۳۰۰km',price:700,attack:200,defense:0},
+{id:'mis_medium',cat:'missile',name:'موشک میان‌برد',emoji:'🚀',desc:'۲۰۰۰km',price:1500,attack:420,defense:0},
+{id:'mis_icbm',cat:'missile',name:'موشک قاره‌پیما',emoji:'🚀',desc:'بین‌قاره‌ای',price:3500,attack:900,defense:0},
+{id:'mis_hypersonic',cat:'missile',name:'هایپرسونیک',emoji:'⚡',desc:'غیرقابل رهگیری',price:4500,attack:1200,defense:0},
+{id:'mis_cruise',cat:'missile',name:'موشک کروز',emoji:'🎯',desc:'دقیق',price:1100,attack:320,defense:0},
+{id:'tk_light',cat:'tank',name:'تانک سبک',emoji:'🚙',desc:'کم‌زره',price:500,attack:150,defense:70},
+{id:'tk_medium',cat:'tank',name:'تانک متوسط',emoji:'🚜',desc:'متعادل',price:950,attack:280,defense:130},
+{id:'tk_heavy',cat:'tank',name:'تانک سنگین',emoji:'🚜',desc:'زره‌پوش',price:1700,attack:480,defense:240},
+{id:'tk_mbt',cat:'tank',name:'تانک MBT',emoji:'🛡️',desc:'قوی‌ترین',price:2600,attack:700,defense:320},
+{id:'inf_soldier',cat:'infantry',name:'سرباز',emoji:'🪖',desc:'ارزان',price:200,attack:50,defense:40},
+{id:'inf_ranger',cat:'infantry',name:'تکاور',emoji:'🥷',desc:'آموزش‌دیده',price:550,attack:140,defense:100},
+{id:'inf_marine',cat:'infantry',name:'تفنگدار',emoji:'🌊',desc:'ساحلی',price:800,attack:220,defense:160},
+{id:'inf_special',cat:'infantry',name:'نیروی ویژه',emoji:'🎖️',desc:'نخبه',price:1400,attack:380,defense:260},
+{id:'navy_frigate',cat:'navy',name:'ناوچه',emoji:'⛵',desc:'کوچک',price:700,attack:180,defense:130},
+{id:'navy_destroyer',cat:'navy',name:'ناوشکن',emoji:'🚢',desc:'متوسط',price:1600,attack:420,defense:260},
+{id:'navy_cruiser',cat:'navy',name:'ناو',emoji:'🚢',desc:'قوی',price:2700,attack:720,defense:420},
+{id:'navy_carrier',cat:'navy',name:'ناو هواپیمابر',emoji:'🛳️',desc:'قوی‌ترین',price:5000,attack:1300,defense:750},
+{id:'def_basic',cat:'defense',name:'سپر پایه',emoji:'🛡️',desc:'ساده',price:400,attack:0,defense:180},
+{id:'def_antiair',cat:'defense',name:'پدافند هوایی',emoji:'🎯',desc:'ضد موشک',price:1000,attack:0,defense:380},
+{id:'def_advanced',cat:'defense',name:'پدافند پیشرفته',emoji:'🛰️',desc:'S-400',price:2200,attack:0,defense:800},
+{id:'def_bunker',cat:'defense',name:'سنگر فرماندهی',emoji:'🏰',desc:'سنگین',price:1800,attack:0,defense:650}
+];
+const COUNTRIES=[
+{id:'ir',name:'ایران',flag:'🇮🇷'},{id:'us',name:'آمریکا',flag:'🇺🇸'},
+{id:'ru',name:'روسیه',flag:'🇷🇺'},{id:'cn',name:'چین',flag:'🇨🇳'},
+{id:'de',name:'آلمان',flag:'🇩🇪'},{id:'fr',name:'فرانسه',flag:'🇫🇷'},
+{id:'gb',name:'انگلستان',flag:'🇬🇧'},{id:'jp',name:'ژاپن',flag:'🇯🇵'},
+{id:'in',name:'هند',flag:'🇮🇳'},{id:'br',name:'برزیل',flag:'🇧🇷'},
+{id:'tr',name:'ترکیه',flag:'🇹🇷'},{id:'sa',name:'عربستان',flag:'🇸🇦'},
+{id:'eg',name:'مصر',flag:'🇪🇬'},{id:'kr',name:'کره جنوبی',flag:'🇰🇷'},
+{id:'it',name:'ایتالیا',flag:'🇮🇹'},{id:'es',name:'اسپانیا',flag:'🇪🇸'}
+];
+let socket=null;
+let myName=localStorage.getItem('ww_name')||null;
+let players={};
+let chat=[];
+function faNum(n){return n.toLocaleString('fa-IR')}
+function now(){return new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})}
+function getCountry(id){return COUNTRIES.find(c=>c.id===id)}
+function getItem(id){return ITEMS.find(i=>i.id===id)}
+function toast(msg,ok){const t=document.getElementById('toast');t.textContent=msg;t.className=ok?'ok show':'show';clearTimeout(t._tm);t._tm=setTimeout(()=>t.className='',3000)}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function setConn(status){const el=document.getElementById('connStatus');if(!el)return;if(status==='ok'){el.textContent='✅ متصل';el.className='ok'}else if(status==='err'){el.textContent='❌ قطع';el.className='err'}else{el.textContent='در حال اتصال...';el.className=''}}
+function currentPlayer(){return players[myName]||null}
+function calcDailyIncome(p){if(!p||!p.inventory)return 0;let t=0;for(const id in p.inventory){const it=getItem(id);if(it&&it.dailyIncome)t+=it.dailyIncome*p.inventory[id]}return t}
+function connectSocket(){
+socket=io(SERVER_URL,{transports:['websocket','polling']});
+socket.on('connect',()=>{setConn('ok');if(myName)socket.emit('join',myName)});
+socket.on('disconnect',()=>setConn('err'));
+socket.on('connect_error',()=>setConn('err'));
+socket.on('players',(data)=>{players=data;refreshGame()});
+socket.on('chat_history',(data)=>{chat=data;renderChat()});
+socket.on('chat',(data)=>{chat=data;renderChat()});
+socket.on('error_msg',(msg)=>toast(msg));
+}
+document.getElementById('authForm').onsubmit=(e)=>{
+e.preventDefault();
+const u=document.getElementById('inpUser').value.trim();
+if(!u){document.getElementById('authError').textContent='اسم بزن';return}
+myName=u;
+localStorage.setItem('ww_name',u);
+if(!socket){connectSocket()}
+socket.emit('join',u);
+showScreen('screen-game');
+setTimeout(()=>refreshGame(),300);
+};
+document.getElementById('btnLogout').onclick=()=>{
+localStorage.removeItem('ww_name');
+myName=null;
+showScreen('screen-auth');
+};
+function refreshGame(){
+const u=currentPlayer();
+if(!u){renderCountrySelection();showScreen('screen-country');return}
+showScreen('screen-game');
+document.getElementById('hUser').textContent=myName;
+document.getElementById('hMoney').textContent=faNum(u.money||0);
+document.getElementById('hDailyIncome').textContent=faNum(calcDailyIncome(u));
+const main=u.countries&&u.countries[0]?getCountry(u.countries[0]):null;
+document.getElementById('hCountry').textContent=main?main.flag+' '+main.name:'بدون کشور';
+renderHome();renderMarket();renderWar();renderChat();renderNotifications();
+}
+function renderCountrySelection(){
+const grid=document.getElementById('countryGrid');
+grid.innerHTML='';
+COUNTRIES.forEach(c=>{
+let owner=null;
+for(const n in players){if(players[n].countries&&players[n].countries.includes(c.id))owner=n}
+const taken=!!owner;
+const div=document.createElement('div');
+div.className='country-card'+(taken?' taken':'');
+div.innerHTML=`${taken?'<div class="lock-badge">🔒</div>':''}<span class="flag">${c.flag}</s
