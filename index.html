@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>⚔️ جنگ جهانی آنلاین</title>
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0d1117;--panel:#161b22;--panel2:#1c2430;--line:#2b3441;--txt:#e6edf3;--muted:#8b949e;--green:#3fb950;--red:#f85149;--gold:#e3b341;--blue:#58a6ff}
@@ -19,6 +19,7 @@ body{font-family:Tahoma,system-ui,sans-serif;background:radial-gradient(circle a
 #authForm input{padding:12px;border-radius:10px;border:1px solid var(--line);background:#0d1117;color:var(--txt);font-family:inherit;font-size:14px;text-align:center}
 #authForm button{padding:12px;border-radius:10px;border:none;background:var(--green);color:#04150a;font-weight:bold;font-size:15px;cursor:pointer;font-family:inherit}
 .error{color:var(--red);font-size:13px;min-height:18px;margin-top:10px}
+#loadingMsg{color:var(--gold);font-size:13px;margin-top:10px;min-height:18px}
 #screen-country{padding:24px 16px;max-width:1100px;margin:0 auto}
 #screen-country h2{text-align:center;margin-bottom:6px}
 #screen-country .lead{text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px}
@@ -27,7 +28,6 @@ body{font-family:Tahoma,system-ui,sans-serif;background:radial-gradient(circle a
 .country-card:hover{border-color:var(--green);transform:translateY(-2px)}
 .country-card.taken{opacity:.85;cursor:not-allowed;background:repeating-linear-gradient(135deg,#2a1518,#2a1518 8px,#221013 8px,#221013 16px);border-color:var(--red)}
 .country-card.taken:hover{border-color:var(--red);transform:none}
-.country-card.taken .flag{filter:grayscale(70%)}
 .country-card .lock-badge{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;font-weight:bold}
 .country-card .flag{font-size:30px;display:block}
 .country-card .name{font-size:13px;margin-top:6px}
@@ -120,100 +120,92 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
 .inv-item .n{font-size:12.5px;margin-top:4px}
 .inv-item .c{font-size:17px;color:var(--gold);font-weight:bold;margin-top:3px}
 .empty{color:var(--muted);font-size:13px;text-align:center;padding:20px}
-#connStatus{font-size:12px;padding:4px 10px;border-radius:20px;background:#333}
+#connStatus{font-size:12px;padding:4px 10px;border-radius:20px;background:#333;color:#fff}
 #connStatus.ok{background:var(--green);color:#04150a}
 #connStatus.err{background:var(--red);color:#fff}
 </style>
 </head>
 <body>
+
 <div id="screen-auth" class="screen active">
-<div class="auth-box">
-<h1>⚔️ جنگ جهانی آنلاین</h1>
-<p class="sub">اسمت رو بنویس و وارد شو</p>
-<form id="authForm" autocomplete="off">
-<input id="inpUser" placeholder="اسم بازیکن..." autocomplete="off" required>
-<button type="submit">شروع بازی</button>
-</form>
-<div id="authError" class="error"></div>
+  <div class="auth-box">
+    <h1>⚔️ جنگ جهانی آنلاین</h1>
+    <p class="sub">اسمت رو بنویس و وارد شو</p>
+    <form id="authForm" autocomplete="off">
+      <input id="inpUser" placeholder="اسم بازیکن..." autocomplete="off" required>
+      <button type="submit">شروع بازی</button>
+    </form>
+    <div id="authError" class="error"></div>
+    <div id="loadingMsg"></div>
+  </div>
 </div>
-</div>
+
 <div id="screen-country" class="screen">
-<h2>🌍 کشورت را انتخاب کن</h2>
-<p class="lead">موجودی اولیه‌ات <b>۱۶٬۰۰۰ میلیارد</b> است. کشورهای قفل‌شده توسط بازیکنان دیگر انتخاب شده‌اند.</p>
-<div id="countryGrid" class="country-grid"></div>
+  <h2>🌍 کشورت را انتخاب کن</h2>
+  <p class="lead">موجودی اولیه‌ات <b>۱۶٬۰۰۰ میلیارد</b> است.</p>
+  <div id="countryGrid" class="country-grid"></div>
 </div>
+
 <div id="screen-game" class="screen">
-<header class="top">
-<div class="brand">⚔️ جنگ جهانی</div>
-<span id="connStatus">در حال اتصال...</span>
-<div class="stat">👤 <b id="hUser">-</b></div>
-<div class="stat">💰 <b id="hMoney">0</b></div>
-<div class="stat green">📈 <b id="hDailyIncome">0</b> / روز</div>
-<div class="stat">🏳️ <b id="hCountry">-</b></div>
-<div class="spacer"></div>
-<button class="logout" id="btnLogout">تغییر بازیکن</button>
-</header>
-<nav class="tabs">
-<button data-tab="home" class="active">🏠 خانه</button>
-<button data-tab="market">🛒 بازار</button>
-<button data-tab="war">⚔️ جنگ</button>
-<button data-tab="chat">💬 چت</button>
-<button data-tab="notif">🔔 اعلان‌ها <span id="notifBadge" class="badge hidden">0</span></button>
-</nav>
-<div class="tab-panel active" id="tab-home">
-<div class="card">
-<h3>💵 درآمد روزانه</h3>
-<div class="income-box">
-<div class="ico">📈</div>
-<div class="info">
-<div class="lbl">درآمد کل در هر روز</div>
-<div class="val" id="incomeTotal">۰</div>
-<div class="next" id="incomeNext">-</div>
+  <header class="top">
+    <div class="brand">⚔️ جنگ جهانی</div>
+    <span id="connStatus">در حال اتصال...</span>
+    <div class="stat">👤 <b id="hUser">-</b></div>
+    <div class="stat">💰 <b id="hMoney">0</b></div>
+    <div class="stat green">📈 <b id="hDailyIncome">0</b> / روز</div>
+    <div class="stat">🏳️ <b id="hCountry">-</b></div>
+    <div class="spacer"></div>
+    <button class="logout" id="btnLogout">تغییر بازیکن</button>
+  </header>
+  <nav class="tabs">
+    <button data-tab="home" class="active">🏠 خانه</button>
+    <button data-tab="market">🛒 بازار</button>
+    <button data-tab="war">⚔️ جنگ</button>
+    <button data-tab="chat">💬 چت</button>
+    <button data-tab="notif">🔔 اعلان‌ها <span id="notifBadge" class="badge hidden">0</span></button>
+  </nav>
+  <div class="tab-panel active" id="tab-home">
+    <div class="card">
+      <h3>💵 درآمد روزانه</h3>
+      <div class="income-box">
+        <div class="ico">📈</div>
+        <div class="info">
+          <div class="lbl">درآمد کل در هر روز</div>
+          <div class="val" id="incomeTotal">۰</div>
+          <div class="next" id="incomeNext">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="card"><h3>🏠 کشورهای من</h3><div id="homeTerritories" class="grid2"></div></div>
+    <div class="card"><h3>📦 وسایل موجود</h3><div id="homeInventory"></div></div>
+  </div>
+  <div class="tab-panel" id="tab-market">
+    <div class="card"><h3>🛒 بازار</h3><div id="marketList"></div></div>
+  </div>
+  <div class="tab-panel" id="tab-war">
+    <div class="card"><h3>⚔️ بازیکنان آنلاین</h3><div id="warPlayers"></div></div>
+  </div>
+  <div class="tab-panel" id="tab-chat">
+    <div class="card">
+      <h3>💬 چت جهانی</h3>
+      <div id="chatBox"></div>
+      <form id="chatForm">
+        <input id="chatInput" placeholder="پیام..." autocomplete="off">
+        <button type="submit" class="btn">ارسال</button>
+      </form>
+    </div>
+  </div>
+  <div class="tab-panel" id="tab-notif">
+    <div class="card"><h3>🔔 اعلان‌ها</h3><div id="notifList"></div></div>
+  </div>
 </div>
-</div>
-</div>
-<div class="card">
-<h3>🏠 کشورهای من</h3>
-<div id="homeTerritories" class="grid2"></div>
-</div>
-<div class="card">
-<h3>📦 وسایل موجود</h3>
-<div id="homeInventory"></div>
-</div>
-</div>
-<div class="tab-panel" id="tab-market">
-<div class="card">
-<h3>🛒 بازار</h3>
-<div id="marketList"></div>
-</div>
-</div>
-<div class="tab-panel" id="tab-war">
-<div class="card">
-<h3>⚔️ بازیکنان آنلاین</h3>
-<div id="warPlayers"></div>
-</div>
-</div>
-<div class="tab-panel" id="tab-chat">
-<div class="card">
-<h3>💬 چت جهانی</h3>
-<div id="chatBox"></div>
-<form id="chatForm">
-<input id="chatInput" placeholder="پیام..." autocomplete="off">
-<button type="submit" class="btn">ارسال</button>
-</form>
-</div>
-</div>
-<div class="tab-panel" id="tab-notif">
-<div class="card">
-<h3>🔔 اعلان‌ها</h3>
-<div id="notifList"></div>
-</div>
-</div>
-</div>
+
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 <div id="toast"></div>
+
 <script>
 const SERVER_URL='https://war-game-server-ifnr.onrender.com';
+
 const CATEGORIES=[
 {id:'income',name:'منابع درآمد',emoji:'💵'},
 {id:'missile',name:'موشک‌ها',emoji:'🚀'},
@@ -222,6 +214,7 @@ const CATEGORIES=[
 {id:'navy',name:'ناوها',emoji:'🚢'},
 {id:'defense',name:'پدافند و دفاع',emoji:'🛡️'}
 ];
+
 const ITEMS=[
 {id:'farm',cat:'income',name:'مزرعه بزرگ',emoji:'🌾',desc:'ارزان',price:1000,attack:0,defense:0,dailyIncome:2500},
 {id:'oil_small',cat:'income',name:'چاه نفت کوچک',emoji:'🛢️',desc:'درآمد بالا',price:1500,attack:0,defense:0,dailyIncome:2800},
@@ -252,6 +245,7 @@ const ITEMS=[
 {id:'def_advanced',cat:'defense',name:'پدافند پیشرفته',emoji:'🛰️',desc:'S-400',price:2200,attack:0,defense:800},
 {id:'def_bunker',cat:'defense',name:'سنگر فرماندهی',emoji:'🏰',desc:'سنگین',price:1800,attack:0,defense:650}
 ];
+
 const COUNTRIES=[
 {id:'ir',name:'ایران',flag:'🇮🇷'},{id:'us',name:'آمریکا',flag:'🇺🇸'},
 {id:'ru',name:'روسیه',flag:'🇷🇺'},{id:'cn',name:'چین',flag:'🇨🇳'},
@@ -262,10 +256,12 @@ const COUNTRIES=[
 {id:'eg',name:'مصر',flag:'🇪🇬'},{id:'kr',name:'کره جنوبی',flag:'🇰🇷'},
 {id:'it',name:'ایتالیا',flag:'🇮🇹'},{id:'es',name:'اسپانیا',flag:'🇪🇸'}
 ];
+
 let socket=null;
-let myName=localStorage.getItem('ww_name')||null;
+let myName=null;
 let players={};
 let chat=[];
+
 function faNum(n){return n.toLocaleString('fa-IR')}
 function now(){return new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})}
 function getCountry(id){return COUNTRIES.find(c=>c.id===id)}
@@ -275,50 +271,274 @@ function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classL
 function setConn(status){const el=document.getElementById('connStatus');if(!el)return;if(status==='ok'){el.textContent='✅ متصل';el.className='ok'}else if(status==='err'){el.textContent='❌ قطع';el.className='err'}else{el.textContent='در حال اتصال...';el.className=''}}
 function currentPlayer(){return players[myName]||null}
 function calcDailyIncome(p){if(!p||!p.inventory)return 0;let t=0;for(const id in p.inventory){const it=getItem(id);if(it&&it.dailyIncome)t+=it.dailyIncome*p.inventory[id]}return t}
+
 function connectSocket(){
-socket=io(SERVER_URL,{transports:['websocket','polling']});
-socket.on('connect',()=>{setConn('ok');if(myName)socket.emit('join',myName)});
-socket.on('disconnect',()=>setConn('err'));
-socket.on('connect_error',()=>setConn('err'));
-socket.on('players',(data)=>{players=data;refreshGame()});
-socket.on('chat_history',(data)=>{chat=data;renderChat()});
-socket.on('chat',(data)=>{chat=data;renderChat()});
-socket.on('error_msg',(msg)=>toast(msg));
+  if(socket&&socket.connected)return;
+  console.log('اتصال به سرور...');
+  socket=io(SERVER_URL,{
+    transports:['websocket','polling'],
+    reconnection:true,
+    reconnectionAttempts:10,
+    reconnectionDelay:2000,
+    timeout:60000
+  });
+  socket.on('connect',()=>{
+    console.log('✅ وصل شد');
+    setConn('ok');
+    if(myName)socket.emit('join',myName);
+  });
+  socket.on('disconnect',()=>{
+    console.log('❌ قطع شد');
+    setConn('err');
+  });
+  socket.on('connect_error',(err)=>{
+    console.log('خطای اتصال:',err.message);
+    setConn('err');
+  });
+  socket.on('players',(data)=>{players=data||{};refreshGame()});
+  socket.on('chat_history',(data)=>{chat=data||[];renderChat()});
+  socket.on('chat',(data)=>{chat=data||[];renderChat()});
+  socket.on('error_msg',(msg)=>toast(msg));
 }
+
 document.getElementById('authForm').onsubmit=(e)=>{
-e.preventDefault();
-const u=document.getElementById('inpUser').value.trim();
-if(!u){document.getElementById('authError').textContent='اسم بزن';return}
-myName=u;
-localStorage.setItem('ww_name',u);
-if(!socket){connectSocket()}
-socket.emit('join',u);
-showScreen('screen-game');
-setTimeout(()=>refreshGame(),300);
+  e.preventDefault();
+  const u=document.getElementById('inpUser').value.trim();
+  const err=document.getElementById('authError');
+  const loading=document.getElementById('loadingMsg');
+  if(!u){err.textContent='اسم بزن';return}
+  
+  myName=u;
+  err.textContent='';
+  loading.textContent='در حال اتصال به سرور...';
+  
+  // اگه سوکت وصل نیست، وصل شو
+  if(!socket||!socket.connected){
+    connectSocket();
+    // منتظر بمون تا وصل شه
+    let waited=0;
+    const checkInterval=setInterval(()=>{
+      waited++;
+      if(socket&&socket.connected){
+        clearInterval(checkInterval);
+        loading.textContent='';
+        socket.emit('join',u);
+        showScreen('screen-game');
+        setTimeout(()=>refreshGame(),500);
+      } else if(waited>=30){
+        // بعد از 30 ثانیه، حتی اگه وصل نشده، برو داخل
+        clearInterval(checkInterval);
+        loading.textContent='';
+        toast('سرور کند پاسخ می‌ده، صبر کن...');
+        showScreen('screen-game');
+        setTimeout(()=>refreshGame(),1000);
+      }
+    },1000);
+  } else {
+    // سوکت وصله
+    loading.textContent='';
+    socket.emit('join',u);
+    showScreen('screen-game');
+    setTimeout(()=>refreshGame(),300);
+  }
 };
+
 document.getElementById('btnLogout').onclick=()=>{
-localStorage.removeItem('ww_name');
-myName=null;
-showScreen('screen-auth');
+  myName=null;
+  showScreen('screen-auth');
+  document.getElementById('inpUser').value='';
 };
+
 function refreshGame(){
-const u=currentPlayer();
-if(!u){renderCountrySelection();showScreen('screen-country');return}
-showScreen('screen-game');
-document.getElementById('hUser').textContent=myName;
-document.getElementById('hMoney').textContent=faNum(u.money||0);
-document.getElementById('hDailyIncome').textContent=faNum(calcDailyIncome(u));
-const main=u.countries&&u.countries[0]?getCountry(u.countries[0]):null;
-document.getElementById('hCountry').textContent=main?main.flag+' '+main.name:'بدون کشور';
-renderHome();renderMarket();renderWar();renderChat();renderNotifications();
+  const u=currentPlayer();
+  if(!u){
+    // اگه هنوز دیتا نیومده، فعلاً صفحه‌ی اصلی رو نشون بده
+    if(myName){
+      showScreen('screen-game');
+      document.getElementById('hUser').textContent=myName;
+    }
+    return;
+  }
+  showScreen('screen-game');
+  document.getElementById('hUser').textContent=myName;
+  document.getElementById('hMoney').textContent=faNum(u.money||0);
+  document.getElementById('hDailyIncome').textContent=faNum(calcDailyIncome(u));
+  const main=u.countries&&u.countries[0]?getCountry(u.countries[0]):null;
+  document.getElementById('hCountry').textContent=main?main.flag+' '+main.name:'بدون کشور';
+  renderHome();renderMarket();renderWar();renderChat();renderNotifications();
 }
-function renderCountrySelection(){
-const grid=document.getElementById('countryGrid');
-grid.innerHTML='';
-COUNTRIES.forEach(c=>{
-let owner=null;
-for(const n in players){if(players[n].countries&&players[n].countries.includes(c.id))owner=n}
-const taken=!!owner;
-const div=document.createElement('div');
-div.className='country-card'+(taken?' taken':'');
-div.innerHTML=`${taken?'<div class="lock-badge">🔒</div>':''}<span class="flag">${c.flag}</s
+
+function renderHome(){
+  const u=currentPlayer();if(!u)return;
+  document.getElementById('incomeTotal').textContent=faNum(calcDailyIncome(u))+' میلیارد';
+  const income=calcDailyIncome(u);
+  const last=u.lastIncomeTime||Date.now();
+  const elapsed=Date.now()-last;
+  const DAY=24*60*60*1000;
+  const remain=Math.max(0,DAY-elapsed);
+  const h=Math.floor(remain/(60*60*1000));
+  const m=Math.floor((remain%(60*60*1000))/(60*1000));
+  document.getElementById('incomeNext').textContent=income>0?`تا واریز بعدی: ${h} ساعت و ${m} دقیقه`:'هنوز منبع درآمدی نداری';
+  const ter=document.getElementById('homeTerritories');ter.innerHTML='';
+  if(!u.countries||u.countries.length===0){ter.innerHTML='<div class="empty">هنوز کشوری نداری</div>'}
+  else{u.countries.forEach((cid,idx)=>{const c=getCountry(cid);if(!c)return;const d=document.createElement('div');d.className='inv-item';d.innerHTML=`<div class="e">${c.flag}</div><div class="n">${c.name}${idx===0?' (اصلی)':''}</div>`;ter.appendChild(d)})}
+  const inv=document.getElementById('homeInventory');inv.innerHTML='';
+  let hasAny=false;
+  CATEGORIES.forEach(cat=>{
+    const items=ITEMS.filter(it=>it.cat===cat.id&&u.inventory&&u.inventory[it.id]>0);
+    if(items.length===0)return;
+    hasAny=true;
+    const header=document.createElement('div');header.className='cat-header';
+    header.innerHTML=`<span>${cat.emoji}</span><span>${cat.name}</span>`;
+    inv.appendChild(header);
+    const grid=document.createElement('div');grid.className='grid2';
+    items.forEach(it=>{const d=document.createElement('div');d.className='inv-item';let extra='';if(it.dailyIncome)extra=`<div class="c" style="font-size:12px;color:var(--green)">📈 ${faNum(it.dailyIncome*u.inventory[it.id])}</div>`;d.innerHTML=`<div class="e">${it.emoji}</div><div class="n">${it.name}</div><div class="c">${u.inventory[it.id]}</div>${extra}`;grid.appendChild(d)});
+    inv.appendChild(grid);
+  });
+  if(!hasAny)inv.innerHTML='<div class="empty">هنوز چیزی نخریدی</div>';
+}
+
+function renderMarket(){
+  const u=currentPlayer();if(!u)return;
+  const list=document.getElementById('marketList');list.innerHTML='';
+  CATEGORIES.forEach(cat=>{
+    const items=ITEMS.filter(it=>it.cat===cat.id);
+    if(items.length===0)return;
+    const header=document.createElement('div');header.className='cat-header';
+    header.innerHTML=`<span>${cat.emoji}</span><span>${cat.name}</span><span class="count">${items.length}</span>`;
+    list.appendChild(header);
+    items.forEach(it=>{
+      const div=document.createElement('div');div.className='item';
+      let stats='';
+      if(it.dailyIncome)stats+=`<span class="inc">📈 ${faNum(it.dailyIncome)}</span>`;
+      if(it.attack)stats+=`<span class="atk">⚔️ ${faNum(it.attack)}</span>`;
+      if(it.defense)stats+=`<span class="def">🛡️ ${faNum(it.defense)}</span>`;
+      div.innerHTML=`<div class="emoji">${it.emoji}</div><div class="info"><div class="n">${it.name}</div><div class="d">${it.desc}</div><div class="p">💰 ${faNum(it.price)} ${stats}</div></div><div class="buy"><input type="number" min="1" value="1" id="qty-${it.id}"><button class="btn" data-buy="${it.id}">خرید</button></div>`;
+      list.appendChild(div);
+    });
+  });
+  list.querySelectorAll('[data-buy]').forEach(btn=>{btn.onclick=()=>{const id=btn.dataset.buy;const qty=parseInt(document.getElementById('qty-'+id).value)||0;if(qty<=0){toast('تعداد معتبر');return}const it=getItem(id);if(!it)return;if(u.money<it.price*qty){toast('موجودی کافی نیست');return}socket.emit('buy',{name:myName,itemId:id,qty:qty,price:it.price});toast(qty+' عدد خریداری شد',true)}});
+}
+
+function renderWar(){
+  const u=currentPlayer();if(!u)return;
+  const box=document.getElementById('warPlayers');box.innerHTML='';
+  const others=Object.keys(players).filter(n=>n!==myName);
+  if(others.length===0){box.innerHTML='<div class="empty">هنوز بازیکن دیگری نیست</div>';return}
+  others.forEach(un=>{
+    const ou=players[un];
+    const main=ou.countries&&ou.countries[0]?getCountry(ou.countries[0]):null;
+    const isAlly=u.allies&&u.allies.includes(un);
+    const div=document.createElement('div');div.className='player';
+    div.innerHTML=`<div class="dot ${ou.online?'on':''}"></div><div class="pinfo"><div class="pname">${un} ${isAlly?'🤝':''}</div><div class="pmeta">${main?main.flag+' '+main.name:'بدون کشور'} | 💰 ${faNum(ou.money||0)}</div></div><div class="actions">${!isAlly?`<button class="btn small blue" data-ally="${un}">🤝 اتحاد</button>`:''}<button class="btn small danger" data-attack="${un}">⚔️ حمله</button></div>`;
+    box.appendChild(div);
+  });
+  box.querySelectorAll('[data-ally]').forEach(b=>b.onclick=()=>{socket.emit('alliance_request',{from:myName,to:b.dataset.ally});toast('درخواست ارسال شد',true)});
+  box.querySelectorAll('[data-attack]').forEach(b=>b.onclick=()=>openAttackModal(b.dataset.attack));
+}
+
+function openAttackModal(target){
+  const u=currentPlayer();if(!u)return;
+  const tu=players[target];if(!tu)return;
+  const targetCountry=tu.countries&&tu.countries[0]?getCountry(tu.countries[0]):null;
+  const modal=document.getElementById('modal');
+  const attackCats=CATEGORIES.filter(c=>['missile','tank','infantry','navy'].includes(c.id));
+  const hasAny=attackCats.some(cat=>ITEMS.some(it=>it.cat===cat.id&&it.attack>0&&u.inventory&&u.inventory[it.id]>0));
+  if(!hasAny){toast('هیچ وسیله حمله‌ای نداری!');return}
+  let bodyHtml='';
+  attackCats.forEach(cat=>{
+    const items=ITEMS.filter(it=>it.cat===cat.id&&it.attack>0&&u.inventory&&u.inventory[it.id]>0);
+    if(items.length===0)return;
+    bodyHtml+=`<div class="modal-cat">${cat.emoji} ${cat.name}</div>`;
+    items.forEach(it=>{bodyHtml+=`<div class="row"><div class="nm">${it.emoji} ${it.name}<div class="sub">موجودی: ${u.inventory[it.id]} | قدرت: ${faNum(it.attack)}</div></div><input type="number" min="0" max="${u.inventory[it.id]}" value="0" data-atk="${it.id}"></div>`});
+  });
+  modal.innerHTML=`<h3>⚔️ حمله به ${target}</h3><p class="muted">کشور هدف: ${targetCountry?targetCountry.flag+' '+targetCountry.name:'بدون کشور'}</p><div style="margin-top:12px">${bodyHtml}</div><div class="power">قدرت حمله: <b id="atkPower">0</b></div><div class="modal-actions"><button class="btn danger" id="doAttack">🚀 حمله</button><button class="btn ghost" id="cancelAttack">انصراف</button></div>`;
+  document.getElementById('overlay').classList.add('active');
+  const inputs=modal.querySelectorAll('[data-atk]');
+  const powerEl=document.getElementById('atkPower');
+  function calc(){let p=0;inputs.forEach(inp=>{const it=getItem(inp.dataset.atk);const q=parseInt(inp.value)||0;if(it)p+=it.attack*q});powerEl.textContent=faNum(p)}
+  inputs.forEach(i=>i.oninput=calc);calc();
+  document.getElementById('cancelAttack').onclick=()=>document.getElementById('overlay').classList.remove('active');
+  document.getElementById('doAttack').onclick=()=>{
+    const selected={};let totalPower=0;let invalid=false;
+    inputs.forEach(inp=>{const id=inp.dataset.atk;const q=parseInt(inp.value)||0;if(q>0){if(q>u.inventory[id]){toast('موجودی '+getItem(id).name+' کافی نیست');invalid=true;return}selected[id]=q;totalPower+=getItem(id).attack*q}});
+    if(invalid)return;
+    if(totalPower<=0){toast('حداقل یه وسیله انتخاب کن');return}
+    document.getElementById('overlay').classList.remove('active');
+    const scenario=Object.entries(selected).map(([id,q])=>`${getItem(id).name}×${q}`).join(' , ');
+    socket.emit('attack',{from:myName,to:target,selected:selected,power:totalPower,scenario:scenario});
+    toast('حمله ارسال شد',true);
+  };
+}
+
+function renderChat(){
+  const box=document.getElementById('chatBox');if(!box)return;
+  box.innerHTML='';
+  chat.forEach(m=>{const d=document.createElement('div');d.className='msg '+(m.type||'');d.innerHTML=`<div class="who">${m.time||''}</div>${m.text}`;box.appendChild(d)});
+  box.scrollTop=box.scrollHeight;
+}
+document.getElementById('chatForm').onsubmit=(e)=>{e.preventDefault();const inp=document.getElementById('chatInput');const txt=inp.value.trim();if(!txt)return;socket.emit('chat',{name:myName,text:txt});inp.value=''};
+
+function renderNotifications(){
+  const u=currentPlayer();if(!u)return;
+  const list=document.getElementById('notifList');
+  const badge=document.getElementById('notifBadge');
+  list.innerHTML='';
+  if(!u.notifications||u.notifications.length===0){list.innerHTML='<div class="empty">هیچ اعلانی نداری</div>';badge.classList.add('hidden');return}
+  const unread=u.notifications.filter(n=>!n.read).length;
+  if(unread>0){badge.textContent=unread;badge.classList.remove('hidden')}else badge.classList.add('hidden');
+  [...u.notifications].reverse().forEach(n=>{
+    const div=document.createElement('div');
+    div.className='notif '+(n.read?'':'unread')+' '+(n.type||'');
+    let txt='';
+    if(n.type==='alliance')txt=`🤝 ${n.from} درخواست اتحاد داد`;
+    else if(n.type==='attack')txt=`⚔️ ${n.from} حمله کرد! قدرت: ${faNum(n.power)}`;
+    else if(n.type==='income')txt=`💰 درآمد روزانه: ${faNum(n.amount)}`;
+    div.innerHTML=`<div class="txt">${txt}</div><div class="time">${n.time||''}</div>`;
+    if(n.type==='alliance'&&n.status==='pending'){const acts=document.createElement('div');acts.className='acts';acts.innerHTML=`<button class="btn small" data-acc="${n.id}">قبول</button><button class="btn small danger" data-rej="${n.id}">رد</button>`;div.appendChild(acts)}
+    if(n.type==='attack'&&n.status==='pending'){const acts=document.createElement('div');acts.className='acts';acts.innerHTML=`<button class="btn small blue" data-def="${n.id}">🛡️ دفاع</button>`;div.appendChild(acts)}
+    list.appendChild(div);
+  });
+  list.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{socket.emit('alliance_response',{user:myName,notifId:parseFloat(b.dataset.acc),accepted:true});toast('قبول شد',true)});
+  list.querySelectorAll('[data-rej]').forEach(b=>b.onclick=()=>{socket.emit('alliance_response',{user:myName,notifId:parseFloat(b.dataset.rej),accepted:false});toast('رد شد')});
+  list.querySelectorAll('[data-def]').forEach(b=>b.onclick=()=>openDefenseModal(parseFloat(b.dataset.def)));
+}
+
+function openDefenseModal(notifId){
+  const u=currentPlayer();if(!u)return;
+  const n=u.notifications.find(x=>x.id===notifId);
+  if(!n||n.type!=='attack'||n.status!=='pending')return;
+  const modal=document.getElementById('modal');
+  const defenseCats=CATEGORIES.filter(c=>['defense','tank','infantry','navy'].includes(c.id));
+  const hasAny=defenseCats.some(cat=>ITEMS.some(it=>it.cat===cat.id&&it.defense>0&&u.inventory&&u.inventory[it.id]>0));
+  let bodyHtml='';
+  if(!hasAny)bodyHtml='<div class="empty">هیچ وسیله دفاعی نداری</div>';
+  else defenseCats.forEach(cat=>{
+    const items=ITEMS.filter(it=>it.cat===cat.id&&it.defense>0&&u.inventory&&u.inventory[it.id]>0);
+    if(items.length===0)return;
+    bodyHtml+=`<div class="modal-cat">${cat.emoji} ${cat.name}</div>`;
+    items.forEach(it=>{bodyHtml+=`<div class="row"><div class="nm">${it.emoji} ${it.name}<div class="sub">موجودی: ${u.inventory[it.id]} | دفاع: ${faNum(it.defense)}</div></div><input type="number" min="0" max="${u.inventory[it.id]}" value="0" data-def="${it.id}"></div>`});
+  });
+  modal.innerHTML=`<h3>🛡️ دفاع در برابر ${n.from}</h3><p class="muted">قدرت حمله دشمن: <b style="color:var(--red)">${faNum(n.power)}</b></p><div style="margin-top:12px">${bodyHtml}</div><div class="power def">قدرت دفاع: <b id="defPower">0</b></div><div class="modal-actions"><button class="btn blue" id="doDefense">🛡️ دفاع</button><button class="btn ghost" id="cancelDefense">انصراف</button></div>`;
+  document.getElementById('overlay').classList.add('active');
+  const inputs=modal.querySelectorAll('[data-def]');
+  const powerEl=document.getElementById('defPower');
+  function calc(){let p=0;inputs.forEach(inp=>{const it=getItem(inp.dataset.def);const q=parseInt(inp.value)||0;if(it)p+=it.defense*q});powerEl.textContent=faNum(p)}
+  inputs.forEach(i=>i.oninput=calc);calc();
+  document.getElementById('cancelDefense').onclick=()=>document.getElementById('overlay').classList.remove('active');
+  document.getElementById('doDefense').onclick=()=>{
+    const selected={};let totalDef=0;let invalid=false;
+    inputs.forEach(inp=>{const id=inp.dataset.def;const q=parseInt(inp.value)||0;if(q>0){if(q>u.inventory[id]){toast('موجودی کافی نیست');invalid=true;return}selected[id]=q;totalDef+=getItem(id).defense*q}});
+    if(invalid)return;
+    document.getElementById('overlay').classList.remove('active');
+    socket.emit('defense',{user:myName,notifId:notifId,selected:selected,defensePower:totalDef});
+    toast('دفاع ارسال شد',true);
+  };
+}
+
+document.querySelectorAll('nav.tabs button').forEach(btn=>{btn.onclick=()=>{document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+btn.dataset.tab).classList.add('active');if(btn.dataset.tab==='notif')renderNotifications();if(btn.dataset.tab==='war')renderWar();if(btn.dataset.tab==='home')renderHome()}});
+
+setInterval(()=>{if(myName&&currentPlayer())renderHome()},30000);
+</script>
+</body>
+</html>
