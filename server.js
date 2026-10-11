@@ -1,28 +1,40 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const cors = require('cors');
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+// CORS manual - اجازه به همه
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
 });
 
-// دیتای بازی (در حافظه - با هر ری استارت پاک می‌شه)
+const server = http.createServer(app);
+
+// Socket.io با CORS کامل
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+    credentials: false
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
+});
+
+// دیتای بازی
 const gameState = {
   players: {},
   chat: []
 };
 
 // ==========================
-// API ساده برای تست
+// API تست
 // ==========================
 app.get('/', (req, res) => {
   res.json({
@@ -34,14 +46,16 @@ app.get('/', (req, res) => {
 });
 
 // ==========================
-// Socket.io - ارتباط زنده
+// Socket.io
 // ==========================
 io.on('connection', (socket) => {
-  console.log('یک بازیکن وصل شد:', socket.id);
+  console.log('بازیکن وصل شد:', socket.id);
 
-  // وقتی بازیکن اسمش رو می‌فرسته
+  // ورود بازیکن
   socket.on('join', (name) => {
     if (!name) return;
+    console.log('join:', name);
+    
     if (!gameState.players[name]) {
       gameState.players[name] = {
         name: name,
@@ -57,15 +71,15 @@ io.on('connection', (socket) => {
       gameState.players[name].online = true;
     }
     socket.playerName = name;
-
-    // به همه خبر بده
+    
     io.emit('players', gameState.players);
-    io.emit('chat_history', gameState.chat);
-    console.log(name, 'وارد بازی شد');
+    socket.emit('chat_history', gameState.chat);
+    console.log('بازیکن وارد شد:', name);
   });
 
-  // خرید از بازار
-  socket.on('buy', ({ name, itemId, qty, price }) => {
+  // خرید
+  socket.on('buy', (data) => {
+    const { name, itemId, qty, price } = data;
     const p = gameState.players[name];
     if (!p) return;
     const cost = price * qty;
@@ -79,10 +93,10 @@ io.on('connection', (socket) => {
   });
 
   // انتخاب کشور
-  socket.on('select_country', ({ name, countryId }) => {
+  socket.on('select_country', (data) => {
+    const { name, countryId } = data;
     const p = gameState.players[name];
     if (!p) return;
-    // چک کن کسی نگرفته باشه
     for (const other in gameState.players) {
       if (other !== name && gameState.players[other].countries.includes(countryId)) {
         socket.emit('error_msg', 'این کشور قبلاً گرفته شده');
@@ -95,23 +109,23 @@ io.on('connection', (socket) => {
   });
 
   // چت
-  socket.on('chat', ({ name, text }) => {
-    addChat(name + ': ' + text, 'normal');
+  socket.on('chat', (data) => {
+    const { name, text } = data;
+    addChat(`${name}: ${text}`, 'normal');
   });
 
   // حمله
-  socket.on('attack', ({ from, to, selected, power, scenario }) => {
+  socket.on('attack', (data) => {
+    const { from, to, selected, power, scenario } = data;
     const attacker = gameState.players[from];
     const defender = gameState.players[to];
     if (!attacker || !defender) return;
 
-    // کم کردن وسایل مهاجم
     for (const id in selected) {
       attacker.inventory[id] = (attacker.inventory[id] || 0) - selected[id];
       if (attacker.inventory[id] <= 0) delete attacker.inventory[id];
     }
 
-    // اعلان به مدافع
     defender.notifications.push({
       id: Date.now() + Math.random(),
       type: 'attack',
@@ -128,7 +142,8 @@ io.on('connection', (socket) => {
   });
 
   // درخواست اتحاد
-  socket.on('alliance_request', ({ from, to }) => {
+  socket.on('alliance_request', (data) => {
+    const { from, to } = data;
     const target = gameState.players[to];
     if (!target) return;
     target.notifications.push({
@@ -143,8 +158,9 @@ io.on('connection', (socket) => {
     addChat(`${from} به ${to} درخواست اتحاد داد`, 'ally');
   });
 
-  // پاسخ به اتحاد
-  socket.on('alliance_response', ({ user, notifId, accepted }) => {
+  // پاسخ اتحاد
+  socket.on('alliance_response', (data) => {
+    const { user, notifId, accepted } = data;
     const u = gameState.players[user];
     if (!u) return;
     const n = u.notifications.find(x => x.id === notifId);
@@ -162,13 +178,13 @@ io.on('connection', (socket) => {
   });
 
   // دفاع
-  socket.on('defense', ({ user, notifId, selected, defensePower }) => {
+  socket.on('defense', (data) => {
+    const { user, notifId, selected, defensePower } = data;
     const u = gameState.players[user];
     if (!u) return;
     const n = u.notifications.find(x => x.id === notifId);
     if (!n) return;
 
-    // کم کردن وسایل دفاعی
     for (const id in selected) {
       u.inventory[id] = (u.inventory[id] || 0) - selected[id];
       if (u.inventory[id] <= 0) delete u.inventory[id];
@@ -181,7 +197,6 @@ io.on('connection', (socket) => {
     let resultMsg = '';
 
     if (atkPower > defensePower) {
-      // مهاجم برنده
       const attacker = gameState.players[n.from];
       const targetCountry = u.countries[0];
       if (targetCountry && attacker) {
@@ -194,7 +209,7 @@ io.on('connection', (socket) => {
     }
 
     io.emit('players', gameState.players);
-    addChat(`📢 نتیجه: حمله ${n.from} با قدرت ${atkPower} علیه دفاع ${defensePower}\n${resultMsg}`, 'result');
+    addChat(`📢 نتیجه: حمله ${n.from} (قدرت ${atkPower}) vs دفاع ${defensePower}\n${resultMsg}`, 'result');
   });
 
   // قطع اتصال
