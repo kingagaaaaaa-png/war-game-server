@@ -7,122 +7,133 @@
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0d1117;--panel:#161b22;--panel2:#1c2430;--line:#2b3441;--txt:#e6edf3;--muted:#8b949e;--green:#3fb950;--red:#f85149;--gold:#e3b341;--blue:#58a6ff}
-body{font-family:Tahoma,system-ui,sans-serif;background:radial-gradient(circle at 50% 0%,#16202c,#0d1117 70%);color:var(--txt);min-height:100vh;padding-bottom:40px}
+:root{--panel:#2a0f05;--panel2:#3a1508;--line:#8b2f10;--txt:#fff5e6;--muted:#d69b6e;--green:#3fb950;--red:#ff3b1f;--gold:#ffb84d;--blue:#ff8844}
+body{font-family:Tahoma,system-ui,sans-serif;color:var(--txt);min-height:100vh;padding-bottom:40px;background:#1a0500;overflow-x:hidden;position:relative}
+/* پس‌زمینه‌ی آتشین */
+body::before{content:'';position:fixed;inset:0;z-index:-2;background:radial-gradient(ellipse at 20% 100%,#ff4500 0%,transparent 50%),radial-gradient(ellipse at 80% 100%,#ff8800 0%,transparent 50%),radial-gradient(ellipse at 50% 0%,#8b0000 0%,transparent 60%),linear-gradient(180deg,#1a0500 0%,#2d0800 40%,#4a0e00 70%,#ff4500 100%);animation:fireGlow 4s ease-in-out infinite alternate}
+body::after{content:'';position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 30% 80%,rgba(255,100,0,.5) 0%,transparent 30%),radial-gradient(circle at 70% 85%,rgba(255,50,0,.5) 0%,transparent 30%);animation:fireFloat 3s ease-in-out infinite alternate;pointer-events:none}
+@keyframes fireGlow{0%{filter:brightness(1) hue-rotate(0deg)}100%{filter:brightness(1.15) hue-rotate(-5deg)}}
+@keyframes fireFloat{0%{transform:translateY(0) scale(1)}100%{transform:translateY(-10px) scale(1.05)}}
 .screen{display:none}.screen.active{display:block}.hidden{display:none!important}
 #screen-auth{display:none;place-items:center;min-height:100vh;padding:20px}
 #screen-auth.active{display:grid}
-.auth-box{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px;text-align:center;box-shadow:0 20px 60px #0008}
-.auth-box h1{font-size:22px;margin-bottom:6px}
+.auth-box{width:100%;max-width:400px;background:linear-gradient(135deg,rgba(42,15,5,.95),rgba(58,21,8,.95));border:2px solid var(--line);border-radius:20px;padding:28px;text-align:center;box-shadow:0 20px 60px #ff450055,inset 0 0 30px rgba(255,100,0,.1);backdrop-filter:blur(10px)}
+.auth-box h1{font-size:26px;margin-bottom:8px;background:linear-gradient(90deg,#ffb84d,#ff4500,#ffb84d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-shadow:0 0 20px #ff4500}
 .auth-box .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
 #authForm{display:flex;flex-direction:column;gap:10px}
-#authForm input{padding:12px;border-radius:10px;border:1px solid var(--line);background:#0d1117;color:var(--txt);font-family:inherit;font-size:14px;text-align:center}
-#authForm button{padding:12px;border-radius:10px;border:none;background:var(--green);color:#04150a;font-weight:bold;font-size:15px;cursor:pointer;font-family:inherit}
+#authForm input{padding:12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:var(--txt);font-family:inherit;font-size:14px;text-align:center;transition:.2s}
+#authForm input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 15px #ff450066}
+#authForm button{padding:12px;border-radius:10px;border:none;background:linear-gradient(90deg,#ff4500,#ff8800);color:#fff;font-weight:bold;font-size:15px;cursor:pointer;font-family:inherit;box-shadow:0 4px 15px #ff450066;transition:.2s}
+#authForm button:hover{transform:scale(1.02);box-shadow:0 6px 20px #ff450099}
+#authForm button:active{transform:scale(.98)}
 .error{color:var(--red);font-size:13px;min-height:18px;margin-top:10px}
 #loadingMsg{color:var(--gold);font-size:13px;margin-top:10px;min-height:18px}
 #screen-country{padding:24px 16px;max-width:1100px;margin:0 auto}
-#screen-country h2{text-align:center;margin-bottom:6px}
+#screen-country h2{text-align:center;margin-bottom:6px;color:#ffb84d;text-shadow:0 0 15px #ff4500}
 #screen-country .lead{text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px}
 .country-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-.country-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 8px;text-align:center;cursor:pointer;transition:.15s;position:relative}
-.country-card:hover{border-color:var(--green);transform:translateY(-2px)}
-.country-card.taken{opacity:.85;cursor:not-allowed;background:repeating-linear-gradient(135deg,#2a1518,#2a1518 8px,#221013 8px,#221013 16px);border-color:var(--red)}
-.country-card.taken:hover{border-color:var(--red);transform:none}
+.country-card{background:linear-gradient(135deg,rgba(42,15,5,.9),rgba(58,21,8,.9));border:2px solid var(--line);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;transition:.2s;position:relative;box-shadow:0 4px 15px #0008}
+.country-card:hover{border-color:var(--gold);transform:translateY(-3px) scale(1.03);box-shadow:0 8px 25px #ff450066}
+.country-card.taken{opacity:.7;cursor:not-allowed;background:repeating-linear-gradient(135deg,#3a0a05,#3a0a05 8px,#2a0505 8px,#2a0505 16px);border-color:#8b1a0a}
+.country-card.taken:hover{border-color:#8b1a0a;transform:none;box-shadow:0 4px 15px #0008}
 .country-card .lock-badge{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;font-weight:bold}
-.country-card .flag{font-size:30px;display:block}
-.country-card .name{font-size:13px;margin-top:6px}
-.country-card .owner{font-size:11px;color:var(--gold);margin-top:4px;background:#0009;padding:2px 4px;border-radius:6px;display:inline-block}
+.country-card .flag{font-size:34px;display:block;filter:drop-shadow(0 2px 5px #000)}
+.country-card .name{font-size:14px;margin-top:6px;font-weight:bold}
+.country-card .owner{font-size:11px;color:var(--gold);margin-top:4px;background:#0009;padding:2px 6px;border-radius:6px;display:inline-block}
 #screen-game{max-width:1100px;margin:0 auto;padding:14px}
-header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:14px}
-.brand{font-weight:bold;font-size:16px}
-.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13px}
-.stat b{color:var(--gold)}.stat.green b{color:var(--green)}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(42,15,5,.95),rgba(58,21,8,.95));border:2px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:14px;box-shadow:0 4px 20px #0008}
+.brand{font-weight:bold;font-size:16px;color:#ffb84d;text-shadow:0 0 10px #ff4500}
+.stat{background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13px}
+.stat b{color:var(--gold)}.stat.green b{color:#6ee06e}
 .spacer{flex:1}
 .logout{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:6px 12px;cursor:pointer;font-family:inherit;font-size:13px}
+.logout:hover{border-color:var(--gold);color:var(--gold)}
 nav.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:12px}
-nav.tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:9px 15px;border-radius:10px;cursor:pointer;white-space:nowrap;font-family:inherit;font-size:13.5px}
-nav.tabs button.active{background:var(--green);color:#04150a;border-color:var(--green);font-weight:bold}
+nav.tabs button{background:linear-gradient(135deg,rgba(42,15,5,.9),rgba(58,21,8,.9));border:1px solid var(--line);color:var(--muted);padding:9px 15px;border-radius:10px;cursor:pointer;white-space:nowrap;font-family:inherit;font-size:13.5px;transition:.2s}
+nav.tabs button.active{background:linear-gradient(90deg,#ff4500,#ff8800);color:#fff;border-color:var(--gold);font-weight:bold;box-shadow:0 4px 15px #ff450066}
 nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;margin-right:5px}
 .tab-panel{display:none}.tab-panel.active{display:block}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
-.card h3{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card{background:linear-gradient(135deg,rgba(42,15,5,.9),rgba(58,21,8,.9));border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 4px 15px #0008}
+.card h3{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px;color:#ffb84d}
 .muted{color:var(--muted);font-size:12.5px}
-.income-box{background:linear-gradient(135deg,#1b2a1f,#16241a);border:1px solid #2c4a35;border-radius:12px;padding:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.income-box{background:linear-gradient(135deg,#3a1a05,#4a2008);border:1px solid #ff8800;border-radius:12px;padding:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;box-shadow:inset 0 0 20px #ff450033}
 .income-box .ico{font-size:30px}
 .income-box .info{flex:1;min-width:180px}
 .income-box .lbl{font-size:12px;color:var(--muted)}
-.income-box .val{font-size:20px;color:var(--green);font-weight:bold;margin-top:3px}
+.income-box .val{font-size:20px;color:#6ee06e;font-weight:bold;margin-top:3px}
 .income-box .next{font-size:12px;color:var(--muted);margin-top:5px}
-.cat-header{display:flex;align-items:center;gap:8px;margin:18px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:14.5px;font-weight:bold;color:var(--blue)}
+.cat-header{display:flex;align-items:center;gap:8px;margin:18px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:14.5px;font-weight:bold;color:var(--gold)}
 .cat-header:first-child{margin-top:0}
-.cat-header .count{background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:1px 9px;font-size:11.5px;font-weight:normal}
-.item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.cat-header .count{background:rgba(0,0,0,.4);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:1px 9px;font-size:11.5px;font-weight:normal}
+.item{display:flex;align-items:center;gap:12px;padding:12px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;transition:.2s}
+.item:hover{border-color:var(--gold);box-shadow:0 0 15px #ff450033}
 .item .emoji{font-size:26px;width:38px;text-align:center}
 .item .info{flex:1;min-width:0}
 .item .info .n{font-size:14px}
 .item .info .d{font-size:12px;color:var(--muted);margin-top:3px}
 .item .info .p{font-size:12.5px;color:var(--gold);margin-top:4px}
-.item .info .p .inc{color:var(--green);margin-right:8px}
-.item .info .p .atk{color:var(--red);margin-right:8px}
-.item .info .p .def{color:var(--blue);margin-right:8px}
+.item .info .p .inc{color:#6ee06e;margin-right:8px}
+.item .info .p .atk{color:#ff6655;margin-right:8px}
+.item .info .p .def{color:#66aaff;margin-right:8px}
 .item .buy{display:flex;gap:6px;align-items:center}
-.item input[type=number]{width:64px;padding:7px;border-radius:8px;border:1px solid var(--line);background:#0d1117;color:var(--txt);font-family:inherit;text-align:center}
-.btn{background:var(--green);color:#04150a;border:none;border-radius:9px;padding:8px 14px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:bold}
-.btn:hover{filter:brightness(1.1)}
-.btn.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line);font-weight:normal}
-.btn.danger{background:var(--red);color:#fff}
-.btn.blue{background:var(--blue);color:#04121f}
+.item input[type=number]{width:64px;padding:7px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:var(--txt);font-family:inherit;text-align:center}
+.btn{background:linear-gradient(90deg,#ff4500,#ff8800);color:#fff;border:none;border-radius:9px;padding:8px 14px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:bold;box-shadow:0 3px 10px #ff450066;transition:.15s}
+.btn:hover{transform:scale(1.03)}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:rgba(0,0,0,.4);color:var(--txt);border:1px solid var(--line);font-weight:normal;box-shadow:none}
+.btn.danger{background:linear-gradient(90deg,#cc0000,#ff2200);color:#fff}
+.btn.blue{background:linear-gradient(90deg,#0055cc,#0088ff);color:#fff}
 .btn.small{padding:5px 10px;font-size:12px}
-.player{display:flex;align-items:center;gap:10px;padding:11px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;margin-bottom:8px}
+.player{display:flex;align-items:center;gap:10px;padding:11px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:11px;margin-bottom:8px}
 .player .dot{width:9px;height:9px;border-radius:50%;background:#555}
-.player .dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.player .dot.on{background:#6ee06e;box-shadow:0 0 8px #6ee06e}
 .player .pinfo{flex:1;min-width:0}
-.player .pname{font-size:13.5px}
+.player .pname{font-size:13.5px;font-weight:bold}
 .player .pmeta{font-size:11.5px;color:var(--muted);margin-top:3px}
 .player .actions{display:flex;gap:6px;flex-wrap:wrap}
-#chatBox{height:400px;overflow-y:auto;background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
-.msg{background:var(--panel2);border-radius:10px;padding:9px 12px;font-size:13px;white-space:pre-wrap;line-height:1.7;border-right:3px solid var(--line)}
-.msg.attack{border-right-color:var(--red);background:#2a1416}
-.msg.defense{border-right-color:var(--blue);background:#0f1e2e}
-.msg.result{border-right-color:var(--gold);background:#241f10}
-.msg.ally{border-right-color:var(--green);background:#0f2117}
-.msg.income{border-right-color:#2ecc71;background:#0f2419}
-.msg .who{color:var(--blue);font-weight:bold;font-size:12px}
+#chatBox{height:400px;overflow-y:auto;background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.msg{background:rgba(0,0,0,.3);border-radius:10px;padding:9px 12px;font-size:13px;white-space:pre-wrap;line-height:1.7;border-right:3px solid var(--line)}
+.msg.attack{border-right-color:#ff3b1f;background:#2a0505}
+.msg.defense{border-right-color:#0088ff;background:#0a0a2a}
+.msg.result{border-right-color:#ffb84d;background:#2a1a05}
+.msg.ally{border-right-color:#6ee06e;background:#052a0a}
+.msg.income{border-right-color:#2ecc71;background:#052a0a}
+.msg .who{color:#ffb84d;font-weight:bold;font-size:12px}
 #chatForm{display:flex;gap:8px}
-#chatForm input{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:#0d1117;color:var(--txt);font-family:inherit}
-.notif{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;border-right:3px solid var(--line)}
-.notif.unread{border-right-color:var(--gold);background:#1e1a10}
-.notif.attack{border-right-color:var(--red)}
-.notif.alliance{border-right-color:var(--green)}
+#chatForm input{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:var(--txt);font-family:inherit}
+.notif{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;border-right:3px solid var(--line)}
+.notif.unread{border-right-color:var(--gold);background:#2a1a05}
+.notif.attack{border-right-color:#ff3b1f}
+.notif.alliance{border-right-color:#6ee06e}
 .notif.income{border-right-color:#2ecc71}
 .notif .txt{font-size:13.5px;line-height:1.7}
 .notif .time{font-size:11px;color:var(--muted);margin-top:6px}
 .notif .acts{display:flex;gap:8px;margin-top:10px}
-.overlay{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:16px;z-index:100}
+.overlay{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:16px;z-index:100;backdrop-filter:blur(5px)}
 .overlay.active{display:flex}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto}
-.modal h3{margin-bottom:4px}
-.modal .modal-cat{font-size:12.5px;color:var(--blue);font-weight:bold;margin:14px 0 6px}
+.modal{background:linear-gradient(135deg,rgba(42,15,5,.98),rgba(58,21,8,.98));border:2px solid var(--line);border-radius:16px;padding:20px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px #ff450055}
+.modal h3{margin-bottom:4px;color:#ffb84d}
+.modal .modal-cat{font-size:12.5px;color:var(--gold);font-weight:bold;margin:14px 0 6px}
 .modal .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
 .modal .row .nm{flex:1;min-width:0}
 .modal .row .nm .sub{font-size:11px;color:var(--muted);margin-top:2px}
-.modal .row input{width:70px;padding:7px;border-radius:8px;border:1px solid var(--line);background:#0d1117;color:var(--txt);font-family:inherit;text-align:center}
+.modal .row input{width:70px;padding:7px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:var(--txt);font-family:inherit;text-align:center}
 .modal .power{margin:14px 0;font-size:15px}
-.modal .power b{color:var(--red);font-size:18px}
-.modal .power.def b{color:var(--blue)}
+.modal .power b{color:#ff6655;font-size:18px}
+.modal .power.def b{color:#66aaff}
 .modal-actions{display:flex;gap:8px;margin-top:14px}
-#toast{position:fixed;bottom:20px;right:50%;transform:translateX(50%) translateY(120px);background:var(--red);color:#fff;padding:12px 22px;border-radius:12px;font-size:13.5px;transition:.3s;z-index:200;max-width:90vw;text-align:center}
+#toast{position:fixed;bottom:20px;right:50%;transform:translateX(50%) translateY(120px);background:linear-gradient(90deg,#cc0000,#ff4500);color:#fff;padding:12px 22px;border-radius:12px;font-size:13.5px;transition:.3s;z-index:200;max-width:90vw;text-align:center;box-shadow:0 8px 25px #ff450066}
 #toast.show{transform:translateX(50%) translateY(0)}
-#toast.ok{background:var(--green);color:#04150a}
+#toast.ok{background:linear-gradient(90deg,#008a00,#3fb950)}
 .grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.inv-item{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px;text-align:center}
+.inv-item{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:11px;padding:11px;text-align:center}
 .inv-item .e{font-size:24px}
 .inv-item .n{font-size:12.5px;margin-top:4px}
 .inv-item .c{font-size:17px;color:var(--gold);font-weight:bold;margin-top:3px}
 .empty{color:var(--muted);font-size:13px;text-align:center;padding:20px}
 #connStatus{font-size:12px;padding:4px 10px;border-radius:20px;background:#333;color:#fff}
-#connStatus.ok{background:var(--green);color:#04150a}
-#connStatus.err{background:var(--red);color:#fff}
+#connStatus.ok{background:linear-gradient(90deg,#008a00,#3fb950);color:#fff}
+#connStatus.err{background:linear-gradient(90deg,#8a0000,#cc0000);color:#fff}
 </style>
 </head>
 <body>
@@ -130,19 +141,21 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
 <div id="screen-auth" class="screen active">
   <div class="auth-box">
     <h1>⚔️ جنگ جهانی آنلاین</h1>
-    <p class="sub">اسمت رو بنویس و وارد شو</p>
+    <p class="sub">اسم و پسوردت رو وارد کن</p>
     <form id="authForm" autocomplete="off">
       <input id="inpUser" placeholder="اسم بازیکن..." autocomplete="off" required>
-      <button type="submit">شروع بازی</button>
+      <input id="inpPass" type="password" placeholder="پسورد..." autocomplete="off" required>
+      <button type="submit" id="authBtn">ورود / ثبت‌نام</button>
     </form>
     <div id="authError" class="error"></div>
     <div id="loadingMsg"></div>
+    <p class="sub" style="margin-top:14px;font-size:11px">اگه اسمت جدید باشه، حساب جدید ساخته می‌شه. اگه قبلاً ثبت‌نام کردی، همون پسورد قبلی رو بزن.</p>
   </div>
 </div>
 
 <div id="screen-country" class="screen">
   <h2>🌍 کشورت را انتخاب کن</h2>
-  <p class="lead">موجودی اولیه‌ات <b>۱۶٬۰۰۰ میلیارد</b> است.</p>
+  <p class="lead">موجودی اولیه‌ات <b>۱۶٬۰۰۰ میلیارد</b> است. کشورهای قفل‌شده توسط بازیکنان دیگر گرفته شده‌اند.</p>
   <div id="countryGrid" class="country-grid"></div>
 </div>
 
@@ -261,6 +274,7 @@ let socket=null;
 let myName=null;
 let players={};
 let chat=[];
+let selectedCountryTemp=null;
 
 function faNum(n){return n.toLocaleString('fa-IR')}
 function now(){return new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})}
@@ -282,81 +296,97 @@ function connectSocket(){
     reconnectionDelay:2000,
     timeout:60000
   });
-  socket.on('connect',()=>{
-    console.log('✅ وصل شد');
-    setConn('ok');
-    if(myName)socket.emit('join',myName);
-  });
-  socket.on('disconnect',()=>{
-    console.log('❌ قطع شد');
-    setConn('err');
-  });
-  socket.on('connect_error',(err)=>{
-    console.log('خطای اتصال:',err.message);
-    setConn('err');
-  });
+  socket.on('connect',()=>{console.log('✅ وصل شد');setConn('ok')});
+  socket.on('disconnect',()=>{console.log('❌ قطع شد');setConn('err')});
+  socket.on('connect_error',(err)=>{console.log('خطای اتصال:',err.message);setConn('err')});
   socket.on('players',(data)=>{players=data||{};refreshGame()});
   socket.on('chat_history',(data)=>{chat=data||[];renderChat()});
   socket.on('chat',(data)=>{chat=data||[];renderChat()});
   socket.on('error_msg',(msg)=>toast(msg));
+  socket.on('login_result',(res)=>{
+    const err=document.getElementById('authError');
+    const loading=document.getElementById('loadingMsg');
+    const btn=document.getElementById('authBtn');
+    loading.textContent='';
+    btn.textContent='ورود / ثبت‌نام';
+    if(!res.ok){
+      err.textContent=res.error||'خطا در ورود';
+      if(myName===null){
+        document.getElementById('inpPass').value='';
+      }
+      return;
+    }
+    err.textContent='';
+    if(res.isNew){
+      toast('🎉 حساب جدید ساخته شد! خوش اومدی '+myName,true);
+    } else {
+      toast('✅ خوش برگشتی '+myName,true);
+    }
+    // بعد از ورود موفق
+    setTimeout(()=>{
+      const p=currentPlayer();
+      if(!p||!p.countries||p.countries.length===0){
+        showScreen('screen-country');
+        renderCountrySelection();
+      } else {
+        showScreen('screen-game');
+        refreshGame();
+      }
+    },300);
+  });
 }
 
 document.getElementById('authForm').onsubmit=(e)=>{
   e.preventDefault();
   const u=document.getElementById('inpUser').value.trim();
+  const p=document.getElementById('inpPass').value;
   const err=document.getElementById('authError');
   const loading=document.getElementById('loadingMsg');
+  const btn=document.getElementById('authBtn');
   if(!u){err.textContent='اسم بزن';return}
+  if(!p){err.textContent='پسورد بزن';return}
+  if(p.length<3){err.textContent='پسورد باید حداقل ۳ حرف باشه';return}
   
   myName=u;
   err.textContent='';
   loading.textContent='در حال اتصال به سرور...';
+  btn.textContent='صبر کن...';
   
-  // اگه سوکت وصل نیست، وصل شو
   if(!socket||!socket.connected){
     connectSocket();
-    // منتظر بمون تا وصل شه
     let waited=0;
     const checkInterval=setInterval(()=>{
       waited++;
       if(socket&&socket.connected){
         clearInterval(checkInterval);
-        loading.textContent='';
-        socket.emit('join',u);
-        showScreen('screen-game');
-        setTimeout(()=>refreshGame(),500);
+        socket.emit('login',{name:u,password:p});
       } else if(waited>=30){
-        // بعد از 30 ثانیه، حتی اگه وصل نشده، برو داخل
         clearInterval(checkInterval);
         loading.textContent='';
-        toast('سرور کند پاسخ می‌ده، صبر کن...');
-        showScreen('screen-game');
-        setTimeout(()=>refreshGame(),1000);
+        btn.textContent='ورود / ثبت‌نام';
+        err.textContent='سرور پاسخ نمی‌ده. دوباره امتحان کن.';
       }
     },1000);
   } else {
-    // سوکت وصله
-    loading.textContent='';
-    socket.emit('join',u);
-    showScreen('screen-game');
-    setTimeout(()=>refreshGame(),300);
+    socket.emit('login',{name:u,password:p});
   }
 };
 
 document.getElementById('btnLogout').onclick=()=>{
   myName=null;
+  selectedCountryTemp=null;
   showScreen('screen-auth');
   document.getElementById('inpUser').value='';
+  document.getElementById('inpPass').value='';
+  document.getElementById('authError').textContent='';
 };
 
 function refreshGame(){
   const u=currentPlayer();
-  if(!u){
-    // اگه هنوز دیتا نیومده، فعلاً صفحه‌ی اصلی رو نشون بده
-    if(myName){
-      showScreen('screen-game');
-      document.getElementById('hUser').textContent=myName;
-    }
+  if(!u)return;
+  if(!u.countries||u.countries.length===0){
+    showScreen('screen-country');
+    renderCountrySelection();
     return;
   }
   showScreen('screen-game');
@@ -366,6 +396,40 @@ function refreshGame(){
   const main=u.countries&&u.countries[0]?getCountry(u.countries[0]):null;
   document.getElementById('hCountry').textContent=main?main.flag+' '+main.name:'بدون کشور';
   renderHome();renderMarket();renderWar();renderChat();renderNotifications();
+}
+
+function renderCountrySelection(){
+  const grid=document.getElementById('countryGrid');
+  grid.innerHTML='';
+  COUNTRIES.forEach(c=>{
+    let owner=null;
+    for(const n in players){
+      if(players[n].countries&&players[n].countries.includes(c.id))owner=n;
+    }
+    const taken=!!owner;
+    const isMine=owner===myName;
+    const div=document.createElement('div');
+    div.className='country-card'+(taken?' taken':'');
+    div.innerHTML=`${taken?'<div class="lock-badge">🔒</div>':''}<span class="flag">${c.flag}</span><div class="name">${c.name}</div>${owner?`<div class="owner">${owner}</div>`:''}`;
+    if(!taken){
+      div.onclick=()=>{
+        socket.emit('select_country',{name:myName,countryId:c.id});
+        toast('انتخاب شد: '+c.name,true);
+        setTimeout(()=>{
+          const u=currentPlayer();
+          if(u&&u.countries&&u.countries.length>0){
+            showScreen('screen-game');
+            refreshGame();
+          }
+        },500);
+      };
+    } else if(isMine){
+      div.onclick=()=>{showScreen('screen-game');refreshGame()};
+    } else {
+      div.onclick=()=>toast('این کشور مال '+owner+' است');
+    }
+    grid.appendChild(div);
+  });
 }
 
 function renderHome(){
@@ -392,7 +456,7 @@ function renderHome(){
     header.innerHTML=`<span>${cat.emoji}</span><span>${cat.name}</span>`;
     inv.appendChild(header);
     const grid=document.createElement('div');grid.className='grid2';
-    items.forEach(it=>{const d=document.createElement('div');d.className='inv-item';let extra='';if(it.dailyIncome)extra=`<div class="c" style="font-size:12px;color:var(--green)">📈 ${faNum(it.dailyIncome*u.inventory[it.id])}</div>`;d.innerHTML=`<div class="e">${it.emoji}</div><div class="n">${it.name}</div><div class="c">${u.inventory[it.id]}</div>${extra}`;grid.appendChild(d)});
+    items.forEach(it=>{const d=document.createElement('div');d.className='inv-item';let extra='';if(it.dailyIncome)extra=`<div class="c" style="font-size:12px;color:#6ee06e">📈 ${faNum(it.dailyIncome*u.inventory[it.id])}</div>`;d.innerHTML=`<div class="e">${it.emoji}</div><div class="n">${it.name}</div><div class="c">${u.inventory[it.id]}</div>${extra}`;grid.appendChild(d)});
     inv.appendChild(grid);
   });
   if(!hasAny)inv.innerHTML='<div class="empty">هنوز چیزی نخریدی</div>';
@@ -519,7 +583,7 @@ function openDefenseModal(notifId){
     bodyHtml+=`<div class="modal-cat">${cat.emoji} ${cat.name}</div>`;
     items.forEach(it=>{bodyHtml+=`<div class="row"><div class="nm">${it.emoji} ${it.name}<div class="sub">موجودی: ${u.inventory[it.id]} | دفاع: ${faNum(it.defense)}</div></div><input type="number" min="0" max="${u.inventory[it.id]}" value="0" data-def="${it.id}"></div>`});
   });
-  modal.innerHTML=`<h3>🛡️ دفاع در برابر ${n.from}</h3><p class="muted">قدرت حمله دشمن: <b style="color:var(--red)">${faNum(n.power)}</b></p><div style="margin-top:12px">${bodyHtml}</div><div class="power def">قدرت دفاع: <b id="defPower">0</b></div><div class="modal-actions"><button class="btn blue" id="doDefense">🛡️ دفاع</button><button class="btn ghost" id="cancelDefense">انصراف</button></div>`;
+  modal.innerHTML=`<h3>🛡️ دفاع در برابر ${n.from}</h3><p class="muted">قدرت حمله دشمن: <b style="color:#ff6655">${faNum(n.power)}</b></p><div style="margin-top:12px">${bodyHtml}</div><div class="power def">قدرت دفاع: <b id="defPower">0</b></div><div class="modal-actions"><button class="btn blue" id="doDefense">🛡️ دفاع</button><button class="btn ghost" id="cancelDefense">انصراف</button></div>`;
   document.getElementById('overlay').classList.add('active');
   const inputs=modal.querySelectorAll('[data-def]');
   const powerEl=document.getElementById('defPower');
