@@ -22,35 +22,34 @@ const io = new Server(server, {
 });
 
 // ==========================
-// MongoDB
+// MongoDB - Connection String مستقیم
 // ==========================
-const MONGODB_URI = process.env.MONGODB_URI || '';
+const MONGODB_URI = 'mongodb+srv://wargame:msb52vgPw2DGC5A0@war-game-cluster.sk142uv.mongodb.net/?appName=war-game-cluster';
+
 let playersCollection = null;
 let chatCollection = null;
 
 async function connectMongoDB() {
-  if (!MONGODB_URI) {
-    console.error('❌ MONGODB_URI تنظیم نشده!');
-    return;
-  }
+  console.log('🔌 اتصال به MongoDB...');
   try {
-    const client = new MongoClient(MONGODB_URI);
+    const client = new MongoClient(MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000
+    });
     await client.connect();
     const db = client.db('war_game');
     playersCollection = db.collection('players');
     chatCollection = db.collection('chat');
     console.log('✅ MongoDB وصل شد');
-    
-    // ایندکس یکتا روی اسم بازیکن
     await playersCollection.createIndex({ name: 1 }, { unique: true });
-    console.log('✅ ایندکس‌ها ساخته شد');
+    console.log('✅ ایندکس ساخته شد');
   } catch (err) {
     console.error('❌ خطا در اتصال MongoDB:', err.message);
   }
 }
 
 // ==========================
-// لود کردن بازیکنان از دیتابیس
+// State
 // ==========================
 const gameState = { players: {}, chat: [] };
 
@@ -59,7 +58,7 @@ async function loadPlayersFromDB() {
   try {
     const players = await playersCollection.find({}).toArray();
     players.forEach(p => {
-      p.online = false; // اول همه آفلاین
+      p.online = false;
       gameState.players[p.name] = p;
     });
     console.log(`✅ ${players.length} بازیکن از دیتابیس لود شد`);
@@ -71,7 +70,7 @@ async function loadPlayersFromDB() {
 async function loadChatFromDB() {
   if (!chatCollection) return;
   try {
-    const msgs = await chatCollection.find({}).sort({ _id: -1 }).limit(200).toArray();
+    const msgs = await chatCollection.find({}).sort({ createdAt: -1 }).limit(200).toArray();
     gameState.chat = msgs.reverse();
     console.log(`✅ ${gameState.chat.length} پیام از دیتابیس لود شد`);
   } catch (err) {
@@ -103,7 +102,7 @@ async function saveChatToDB(msg) {
 }
 
 // ==========================
-// API تست
+// API
 // ==========================
 app.get('/', (req, res) => {
   res.json({
@@ -121,16 +120,13 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
   console.log('بازیکن وصل شد:', socket.id);
 
-  // ورود یا ثبت‌نام
   socket.on('login', async ({ name, password }) => {
     if (!name || !password) {
       socket.emit('login_result', { ok: false, error: 'اسم و پسورد لازمه' });
       return;
     }
-    
     let existing = gameState.players[name];
-    
-    // اگه توی حافظه نبود، از دیتابیس بگیر
+
     if (!existing && playersCollection) {
       try {
         existing = await playersCollection.findOne({ name: name });
@@ -139,19 +135,13 @@ io.on('connection', (socket) => {
         console.error('خطا در پیدا کردن بازیکن:', err.message);
       }
     }
-    
+
     if (!existing) {
-      // بازیکن جدید - ثبت‌نام
       const newPlayer = {
-        name: name,
-        password: password,
-        money: 16000,
-        countries: [],
-        inventory: {},
-        allies: [],
-        notifications: [],
-        online: true,
-        lastIncomeTime: Date.now()
+        name, password,
+        money: 16000, countries: [], inventory: {},
+        allies: [], notifications: [],
+        online: true, lastIncomeTime: Date.now()
       };
       gameState.players[name] = newPlayer;
       socket.playerName = name;
@@ -159,26 +149,24 @@ io.on('connection', (socket) => {
       socket.emit('login_result', { ok: true, isNew: true });
       io.emit('players', gameState.players);
       socket.emit('chat_history', gameState.chat);
-      console.log('✅ بازیکن جدید ثبت شد:', name);
+      console.log('✅ بازیکن جدید:', name);
       return;
     }
-    
-    // بازیکن قبلی - چک پسورد
+
     if (existing.password !== password) {
       socket.emit('login_result', { ok: false, error: 'پسورد اشتباهه!' });
       return;
     }
-    
+
     existing.online = true;
     socket.playerName = name;
     await savePlayerToDB(existing);
     socket.emit('login_result', { ok: true, isNew: false });
     io.emit('players', gameState.players);
     socket.emit('chat_history', gameState.chat);
-    console.log('✅ بازیکن وارد شد:', name);
+    console.log('✅ وارد شد:', name);
   });
 
-  // خرید
   socket.on('buy', async (data) => {
     const { name, itemId, qty, price } = data;
     const p = gameState.players[name];
@@ -191,7 +179,6 @@ io.on('connection', (socket) => {
     io.emit('players', gameState.players);
   });
 
-  // انتخاب کشور
   socket.on('select_country', async (data) => {
     const { name, countryId } = data;
     const p = gameState.players[name];
@@ -208,13 +195,11 @@ io.on('connection', (socket) => {
     addChat(`${name} کشور را انتخاب کرد`, 'ally');
   });
 
-  // چت
   socket.on('chat', async (data) => {
     const { name, text } = data;
     addChat(`${name}: ${text}`, 'normal');
   });
 
-  // حمله
   socket.on('attack', async (data) => {
     const { from, to, selected, power, scenario } = data;
     const attacker = gameState.players[from];
@@ -226,8 +211,7 @@ io.on('connection', (socket) => {
     }
     defender.notifications.push({
       id: Date.now() + Math.random(),
-      type: 'attack', from: from, selected: selected, power: power,
-      status: 'pending',
+      type: 'attack', from, selected, power, status: 'pending',
       time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
       read: false
     });
@@ -237,15 +221,13 @@ io.on('connection', (socket) => {
     addChat(`${from} به ${to} حمله کرد! قدرت: ${power}\nسناریو: ${scenario}`, 'attack');
   });
 
-  // درخواست اتحاد
   socket.on('alliance_request', async (data) => {
     const { from, to } = data;
     const target = gameState.players[to];
     if (!target) return;
     target.notifications.push({
       id: Date.now() + Math.random(),
-      type: 'alliance', from: from,
-      status: 'pending',
+      type: 'alliance', from, status: 'pending',
       time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
       read: false
     });
@@ -254,7 +236,6 @@ io.on('connection', (socket) => {
     addChat(`${from} به ${to} درخواست اتحاد داد`, 'ally');
   });
 
-  // پاسخ اتحاد
   socket.on('alliance_response', async (data) => {
     const { user, notifId, accepted } = data;
     const u = gameState.players[user];
@@ -267,14 +248,13 @@ io.on('connection', (socket) => {
       const other = gameState.players[n.from];
       if (other && !other.allies.includes(user)) other.allies.push(user);
       if (!u.allies.includes(n.from)) u.allies.push(n.from);
-      await savePlayerToDB(other);
+      if (other) await savePlayerToDB(other);
       addChat(`اتحاد بین ${user} و ${n.from} برقرار شد`, 'ally');
     }
     await savePlayerToDB(u);
     io.emit('players', gameState.players);
   });
 
-  // دفاع
   socket.on('defense', async (data) => {
     const { user, notifId, selected, defensePower } = data;
     const u = gameState.players[user];
@@ -306,7 +286,6 @@ io.on('connection', (socket) => {
     addChat(`📢 نتیجه: حمله ${n.from} (قدرت ${atkPower}) vs دفاع ${defensePower}\n${resultMsg}`, 'result');
   });
 
-  // قطع اتصال
   socket.on('disconnect', async () => {
     if (socket.playerName && gameState.players[socket.playerName]) {
       gameState.players[socket.playerName].online = false;
@@ -319,7 +298,7 @@ io.on('connection', (socket) => {
 
 function addChat(text, type = 'normal') {
   const msg = {
-    text: text, type: type,
+    text, type,
     time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
     createdAt: new Date()
   };
@@ -329,9 +308,6 @@ function addChat(text, type = 'normal') {
   io.emit('chat', gameState.chat);
 }
 
-// ==========================
-// شروع سرور
-// ==========================
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
   console.log('🚀 سرور روی پورت ' + PORT + ' روشن شد');
