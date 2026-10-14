@@ -24,7 +24,7 @@ const io = new Server(server, {
 // ==========================
 // MongoDB - Connection String مستقیم
 // ==========================
-const MONGODB_URI = 'mongodb+srv://wargame:msb52vgPw2DGC5A0@war-game-cluster.sk142uv.mongodb.net/?appName=war-game-cluster';
+const MONGODB_URI = 'mongodb+srv://wargame:62636362f@war-game-cluster.sk142uv.mongodb.net/?appName=war-game-cluster';
 
 let playersCollection = null;
 let chatCollection = null;
