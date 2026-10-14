@@ -21,9 +21,6 @@ const io = new Server(server, {
   allowEIO3: true
 });
 
-// ==========================
-// MongoDB - Connection String مستقیم
-// ==========================
 const MONGODB_URI = 'mongodb+srv://wargame:62636362f@war-game-cluster.sk142uv.mongodb.net/?appName=war-game-cluster';
 
 let playersCollection = null;
@@ -48,23 +45,15 @@ async function connectMongoDB() {
   }
 }
 
-// ==========================
-// State
-// ==========================
 const gameState = { players: {}, chat: [] };
 
 async function loadPlayersFromDB() {
   if (!playersCollection) return;
   try {
     const players = await playersCollection.find({}).toArray();
-    players.forEach(p => {
-      p.online = false;
-      gameState.players[p.name] = p;
-    });
-    console.log(`✅ ${players.length} بازیکن از دیتابیس لود شد`);
-  } catch (err) {
-    console.error('❌ خطا در لود بازیکنان:', err.message);
-  }
+    players.forEach(p => { p.online = false; gameState.players[p.name] = p; });
+    console.log(`✅ ${players.length} بازیکن لود شد`);
+  } catch (err) { console.error('خطا:', err.message); }
 }
 
 async function loadChatFromDB() {
@@ -72,38 +61,23 @@ async function loadChatFromDB() {
   try {
     const msgs = await chatCollection.find({}).sort({ createdAt: -1 }).limit(200).toArray();
     gameState.chat = msgs.reverse();
-    console.log(`✅ ${gameState.chat.length} پیام از دیتابیس لود شد`);
-  } catch (err) {
-    console.error('❌ خطا در لود چت:', err.message);
-  }
+    console.log(`✅ ${gameState.chat.length} پیام لود شد`);
+  } catch (err) { console.error('خطا:', err.message); }
 }
 
 async function savePlayerToDB(player) {
   if (!playersCollection) return;
   try {
     const { _id, ...data } = player;
-    await playersCollection.updateOne(
-      { name: player.name },
-      { $set: data },
-      { upsert: true }
-    );
-  } catch (err) {
-    console.error('خطا در ذخیره بازیکن:', err.message);
-  }
+    await playersCollection.updateOne({ name: player.name }, { $set: data }, { upsert: true });
+  } catch (err) { console.error('خطا در ذخیره:', err.message); }
 }
 
 async function saveChatToDB(msg) {
   if (!chatCollection) return;
-  try {
-    await chatCollection.insertOne(msg);
-  } catch (err) {
-    console.error('خطا در ذخیره چت:', err.message);
-  }
+  try { await chatCollection.insertOne(msg); } catch (err) { console.error('خطا:', err.message); }
 }
 
-// ==========================
-// API
-// ==========================
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
@@ -114,34 +88,22 @@ app.get('/', (req, res) => {
   });
 });
 
-// ==========================
-// Socket.io
-// ==========================
 io.on('connection', (socket) => {
   console.log('بازیکن وصل شد:', socket.id);
 
   socket.on('login', async ({ name, password }) => {
-    if (!name || !password) {
-      socket.emit('login_result', { ok: false, error: 'اسم و پسورد لازمه' });
-      return;
-    }
+    if (!name || !password) { socket.emit('login_result', { ok: false, error: 'اسم و پسورد لازمه' }); return; }
     let existing = gameState.players[name];
-
     if (!existing && playersCollection) {
       try {
-        existing = await playersCollection.findOne({ name: name });
+        existing = await playersCollection.findOne({ name });
         if (existing) gameState.players[name] = existing;
-      } catch (err) {
-        console.error('خطا در پیدا کردن بازیکن:', err.message);
-      }
+      } catch (err) { console.error(err.message); }
     }
-
     if (!existing) {
       const newPlayer = {
-        name, password,
-        money: 16000, countries: [], inventory: {},
-        allies: [], notifications: [],
-        online: true, lastIncomeTime: Date.now()
+        name, password, money: 16000, countries: [], inventory: {},
+        allies: [], notifications: [], online: true, lastIncomeTime: Date.now()
       };
       gameState.players[name] = newPlayer;
       socket.playerName = name;
@@ -152,12 +114,7 @@ io.on('connection', (socket) => {
       console.log('✅ بازیکن جدید:', name);
       return;
     }
-
-    if (existing.password !== password) {
-      socket.emit('login_result', { ok: false, error: 'پسورد اشتباهه!' });
-      return;
-    }
-
+    if (existing.password !== password) { socket.emit('login_result', { ok: false, error: 'پسورد اشتباهه!' }); return; }
     existing.online = true;
     socket.playerName = name;
     await savePlayerToDB(existing);
@@ -185,8 +142,7 @@ io.on('connection', (socket) => {
     if (!p) return;
     for (const other in gameState.players) {
       if (other !== name && gameState.players[other].countries.includes(countryId)) {
-        socket.emit('error_msg', 'این کشور قبلاً گرفته شده');
-        return;
+        socket.emit('error_msg', 'این کشور قبلاً گرفته شده'); return;
       }
     }
     p.countries = [countryId];
@@ -210,10 +166,8 @@ io.on('connection', (socket) => {
       if (attacker.inventory[id] <= 0) delete attacker.inventory[id];
     }
     defender.notifications.push({
-      id: Date.now() + Math.random(),
-      type: 'attack', from, selected, power, status: 'pending',
-      time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
-      read: false
+      id: Date.now() + Math.random(), type: 'attack', from, selected, power, status: 'pending',
+      time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }), read: false
     });
     await savePlayerToDB(attacker);
     await savePlayerToDB(defender);
@@ -226,10 +180,8 @@ io.on('connection', (socket) => {
     const target = gameState.players[to];
     if (!target) return;
     target.notifications.push({
-      id: Date.now() + Math.random(),
-      type: 'alliance', from, status: 'pending',
-      time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
-      read: false
+      id: Date.now() + Math.random(), type: 'alliance', from, status: 'pending',
+      time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }), read: false
     });
     await savePlayerToDB(target);
     io.emit('players', gameState.players);
@@ -286,6 +238,30 @@ io.on('connection', (socket) => {
     addChat(`📢 نتیجه: حمله ${n.from} (قدرت ${atkPower}) vs دفاع ${defensePower}\n${resultMsg}`, 'result');
   });
 
+  // 🕵️ جاسوسی
+  socket.on('spy', async (data) => {
+    const { from, to } = data;
+    const spy = gameState.players[from];
+    const target = gameState.players[to];
+    if (!spy || !target) return;
+    const cost = 500;
+    if (spy.money < cost) {
+      socket.emit('error_msg', 'موجودی برای جاسوسی کافی نیست (۵۰۰ میلیارد)');
+      return;
+    }
+    spy.money -= cost;
+    await savePlayerToDB(spy);
+    io.emit('players', gameState.players);
+    socket.emit('spy_result', {
+      name: to,
+      money: target.money,
+      countries: target.countries,
+      allies: target.allies,
+      inventory: target.inventory
+    });
+    addChat(`🕵️ ${from} به ${to} جاسوسی فرستاد`, 'normal');
+  });
+
   socket.on('disconnect', async () => {
     if (socket.playerName && gameState.players[socket.playerName]) {
       gameState.players[socket.playerName].online = false;
@@ -315,4 +291,3 @@ server.listen(PORT, async () => {
   await loadPlayersFromDB();
   await loadChatFromDB();
 });
-// deploy
