@@ -27,6 +27,22 @@ let playersCollection = null;
 let chatCollection = null;
 const playerSockets = {};
 
+// ⏰ تنظیمات درآمد خودکار
+// برای تست سریع، این رو بذار 60 * 1000 (۱ دقیقه)
+// برای بازی واقعی، 24 * 60 * 60 * 1000 (۲۴ ساعت)
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// درآمد روزانه‌ی هر منبع (باید با ITEMS توی index.html یکی باشه)
+const INCOME_ITEMS = {
+  farm: 2500,
+  oil_small: 2800,
+  mine: 3200,
+  tourism: 3800,
+  gas: 4200,
+  oil_big: 6000,
+  tech: 8000
+};
+
 async function connectMongoDB() {
   console.log('🔌 اتصال به MongoDB...');
   try {
@@ -162,6 +178,7 @@ io.on('connection', (socket) => {
     if (p.money < cost) { socket.emit('error_msg', 'موجودی کافی نیست'); return; }
     p.money -= cost;
     p.inventory[itemId] = (p.inventory[itemId] || 0) + qty;
+    if (INCOME_ITEMS[itemId] && !p.lastIncomeTime) p.lastIncomeTime = Date.now();
     await savePlayerToDB(p);
     io.emit('players', getPublicPlayers());
   });
@@ -336,10 +353,63 @@ function addChat(text, type = 'normal') {
   io.emit('chat', gameState.chat);
 }
 
+// ==========================
+// 💰 درآمد خودکار روزانه
+// ==========================
+async function processDailyIncome() {
+  const now = Date.now();
+  let changed = false;
+  for (const name in gameState.players) {
+    const p = gameState.players[name];
+    if (!p.lastIncomeTime) { p.lastIncomeTime = now; continue; }
+    const elapsed = now - p.lastIncomeTime;
+    if (elapsed < DAY_MS) continue;
+
+    // محاسبه‌ی درآمد روزانه
+    let incomePerDay = 0;
+    for (const id in p.inventory || {}) {
+      if (INCOME_ITEMS[id]) incomePerDay += INCOME_ITEMS[id] * p.inventory[id];
+    }
+
+    const cycles = Math.floor(elapsed / DAY_MS);
+
+    if (incomePerDay > 0) {
+      const total = incomePerDay * cycles;
+      p.money += total;
+      p.lastIncomeTime += cycles * DAY_MS;
+      p.notifications = p.notifications || [];
+      p.notifications.push({
+        id: Date.now() + Math.random(),
+        type: 'income',
+        amount: total,
+        time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+        read: false
+      });
+      if (playerSockets[name]) {
+        playerSockets[name].emit('my_notifications', p.notifications);
+      }
+      changed = true;
+      console.log(`💰 ${name} ${total} میلیارد درآمد روزانه گرفت (${cycles} روز)`);
+    } else {
+      p.lastIncomeTime = now;
+    }
+    await savePlayerToDB(p);
+  }
+  if (changed) io.emit('players', getPublicPlayers());
+}
+
+// هر ۳۰ ثانیه چک کن
+setInterval(processDailyIncome, 30 * 1000);
+
+// ==========================
+// شروع سرور
+// ==========================
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
   console.log('🚀 سرور روی پورت ' + PORT + ' روشن شد');
   await connectMongoDB();
   await loadPlayersFromDB();
   await loadChatFromDB();
+  // بعد از لود، یه بار چک کن
+  setTimeout(processDailyIncome, 5000);
 });
