@@ -25,6 +25,7 @@ const MONGODB_URI = 'mongodb+srv://wargame:62636362f@war-game-cluster.sk142uv.mo
 
 let playersCollection = null;
 let chatCollection = null;
+const playerSockets = {};
 
 async function connectMongoDB() {
   console.log('🔌 اتصال به MongoDB...');
@@ -46,6 +47,29 @@ async function connectMongoDB() {
 }
 
 const gameState = { players: {}, chat: [] };
+
+function getPublicPlayers() {
+  const out = {};
+  for (const name in gameState.players) {
+    const p = gameState.players[name];
+    out[name] = {
+      name: p.name,
+      money: p.money,
+      countries: p.countries || [],
+      inventory: p.inventory || {},
+      allies: p.allies || [],
+      online: p.online,
+      lastIncomeTime: p.lastIncomeTime
+    };
+  }
+  return out;
+}
+
+function sendMyNotifications(name) {
+  const p = gameState.players[name];
+  const sock = playerSockets[name];
+  if (p && sock) sock.emit('my_notifications', p.notifications || []);
+}
 
 async function loadPlayersFromDB() {
   if (!playersCollection) return;
@@ -106,20 +130,26 @@ io.on('connection', (socket) => {
         allies: [], notifications: [], online: true, lastIncomeTime: Date.now()
       };
       gameState.players[name] = newPlayer;
+      if (socket.playerName) delete playerSockets[socket.playerName];
       socket.playerName = name;
+      playerSockets[name] = socket;
       await savePlayerToDB(newPlayer);
       socket.emit('login_result', { ok: true, isNew: true });
-      io.emit('players', gameState.players);
+      socket.emit('my_notifications', newPlayer.notifications);
+      io.emit('players', getPublicPlayers());
       socket.emit('chat_history', gameState.chat);
       console.log('✅ بازیکن جدید:', name);
       return;
     }
     if (existing.password !== password) { socket.emit('login_result', { ok: false, error: 'پسورد اشتباهه!' }); return; }
     existing.online = true;
+    if (socket.playerName) delete playerSockets[socket.playerName];
     socket.playerName = name;
+    playerSockets[name] = socket;
     await savePlayerToDB(existing);
     socket.emit('login_result', { ok: true, isNew: false });
-    io.emit('players', gameState.players);
+    socket.emit('my_notifications', existing.notifications || []);
+    io.emit('players', getPublicPlayers());
     socket.emit('chat_history', gameState.chat);
     console.log('✅ وارد شد:', name);
   });
@@ -133,7 +163,7 @@ io.on('connection', (socket) => {
     p.money -= cost;
     p.inventory[itemId] = (p.inventory[itemId] || 0) + qty;
     await savePlayerToDB(p);
-    io.emit('players', gameState.players);
+    io.emit('players', getPublicPlayers());
   });
 
   socket.on('select_country', async (data) => {
@@ -147,7 +177,7 @@ io.on('connection', (socket) => {
     }
     p.countries = [countryId];
     await savePlayerToDB(p);
-    io.emit('players', gameState.players);
+    io.emit('players', getPublicPlayers());
     addChat(`${name} کشور را انتخاب کرد`, 'ally');
   });
 
@@ -161,6 +191,7 @@ io.on('connection', (socket) => {
     const attacker = gameState.players[from];
     const defender = gameState.players[to];
     if (!attacker || !defender) return;
+    if (from === to) { socket.emit('error_msg', 'نمی‌تونی به خودت حمله کنی!'); return; }
     for (const id in selected) {
       attacker.inventory[id] = (attacker.inventory[id] || 0) - selected[id];
       if (attacker.inventory[id] <= 0) delete attacker.inventory[id];
@@ -171,7 +202,8 @@ io.on('connection', (socket) => {
     });
     await savePlayerToDB(attacker);
     await savePlayerToDB(defender);
-    io.emit('players', gameState.players);
+    io.emit('players', getPublicPlayers());
+    sendMyNotifications(to);
     addChat(`${from} به ${to} حمله کرد! قدرت: ${power}\nسناریو: ${scenario}`, 'attack');
   });
 
@@ -179,13 +211,15 @@ io.on('connection', (socket) => {
     const { from, to } = data;
     const target = gameState.players[to];
     if (!target) return;
+    if (from === to) { socket.emit('error_msg', 'نمی‌تونی به خودت درخواست بدی'); return; }
     target.notifications.push({
       id: Date.now() + Math.random(), type: 'alliance', from, status: 'pending',
       time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }), read: false
     });
     await savePlayerToDB(target);
-    io.emit('players', gameState.players);
-    addChat(`${from} به ${to} درخواست اتحاد داد`, 'ally');
+    io.emit('players', getPublicPlayers());
+    sendMyNotifications(to);
+    console.log(`🤝 ${from} به ${to} درخواست اتحاد داد (خصوصی)`);
   });
 
   socket.on('alliance_response', async (data) => {
@@ -200,11 +234,29 @@ io.on('connection', (socket) => {
       const other = gameState.players[n.from];
       if (other && !other.allies.includes(user)) other.allies.push(user);
       if (!u.allies.includes(n.from)) u.allies.push(n.from);
-      if (other) await savePlayerToDB(other);
+      if (other) {
+        other.notifications.push({
+          id: Date.now() + Math.random(), type: 'alliance_accepted', from: user, status: 'resolved',
+          time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }), read: false
+        });
+        await savePlayerToDB(other);
+        sendMyNotifications(n.from);
+      }
       addChat(`اتحاد بین ${user} و ${n.from} برقرار شد`, 'ally');
+    } else {
+      const other = gameState.players[n.from];
+      if (other) {
+        other.notifications.push({
+          id: Date.now() + Math.random(), type: 'alliance_rejected', from: user, status: 'resolved',
+          time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }), read: false
+        });
+        await savePlayerToDB(other);
+        sendMyNotifications(n.from);
+      }
     }
     await savePlayerToDB(u);
-    io.emit('players', gameState.players);
+    sendMyNotifications(user);
+    io.emit('players', getPublicPlayers());
   });
 
   socket.on('defense', async (data) => {
@@ -228,45 +280,45 @@ io.on('connection', (socket) => {
         u.countries = u.countries.filter(c => c !== targetCountry);
         if (!attacker.countries.includes(targetCountry)) attacker.countries.push(targetCountry);
         await savePlayerToDB(attacker);
+        attacker.notifications.push({
+          id: Date.now() + Math.random(), type: 'attack_success', to: user, status: 'resolved',
+          time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }), read: false
+        });
+        await savePlayerToDB(attacker);
+        sendMyNotifications(n.from);
       }
       resultMsg = `💥 حمله موفق! ${n.from} کشور ${u.name} را تصرف کرد.`;
     } else {
       resultMsg = `🛡️ دفاع موفق! حمله ${n.from} دفع شد.`;
     }
     await savePlayerToDB(u);
-    io.emit('players', gameState.players);
+    sendMyNotifications(user);
+    io.emit('players', getPublicPlayers());
     addChat(`📢 نتیجه: حمله ${n.from} (قدرت ${atkPower}) vs دفاع ${defensePower}\n${resultMsg}`, 'result');
   });
 
-  // 🕵️ جاسوسی
   socket.on('spy', async (data) => {
     const { from, to } = data;
     const spy = gameState.players[from];
     const target = gameState.players[to];
     if (!spy || !target) return;
     const cost = 500;
-    if (spy.money < cost) {
-      socket.emit('error_msg', 'موجودی برای جاسوسی کافی نیست (۵۰۰ میلیارد)');
-      return;
-    }
+    if (spy.money < cost) { socket.emit('error_msg', 'موجودی برای جاسوسی کافی نیست (۵۰۰ میلیارد)'); return; }
     spy.money -= cost;
     await savePlayerToDB(spy);
-    io.emit('players', gameState.players);
+    io.emit('players', getPublicPlayers());
     socket.emit('spy_result', {
-      name: to,
-      money: target.money,
-      countries: target.countries,
-      allies: target.allies,
-      inventory: target.inventory
+      name: to, money: target.money, countries: target.countries,
+      allies: target.allies, inventory: target.inventory
     });
-    addChat(`🕵️ ${from} به ${to} جاسوسی فرستاد`, 'normal');
   });
 
   socket.on('disconnect', async () => {
     if (socket.playerName && gameState.players[socket.playerName]) {
       gameState.players[socket.playerName].online = false;
+      delete playerSockets[socket.playerName];
       await savePlayerToDB(gameState.players[socket.playerName]);
-      io.emit('players', gameState.players);
+      io.emit('players', getPublicPlayers());
       console.log(socket.playerName, 'خارج شد');
     }
   });
