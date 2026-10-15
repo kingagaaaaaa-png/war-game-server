@@ -275,6 +275,7 @@ let socket=null;
 let myName=null;
 let players={};
 let chat=[];
+let myNotifications=[];
 
 function faNum(n){return n.toLocaleString('fa-IR')}
 function now(){return new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})}
@@ -299,6 +300,7 @@ function connectSocket(){
   socket.on('chat_history',(data)=>{chat=data||[];renderChat()});
   socket.on('chat',(data)=>{chat=data||[];renderChat()});
   socket.on('error_msg',(msg)=>toast(msg));
+  socket.on('my_notifications',(data)=>{myNotifications=data||[];renderNotifications()});
   socket.on('spy_result',(data)=>{showSpyResult(data)});
   socket.on('login_result',(res)=>{
     const err=document.getElementById('authError');
@@ -340,7 +342,7 @@ document.getElementById('authForm').onsubmit=(e)=>{
 };
 
 document.getElementById('btnLogout').onclick=()=>{
-  myName=null;showScreen('screen-auth');
+  myName=null;myNotifications=[];showScreen('screen-auth');
   document.getElementById('inpUser').value='';
   document.getElementById('inpPass').value='';
   document.getElementById('authError').textContent='';
@@ -442,12 +444,11 @@ function renderWar(){
     div.innerHTML=`<div class="dot ${ou.online?'on':''}"></div><div class="pinfo"><div class="pname">${un} ${isAlly?'🤝':''}</div><div class="pmeta">${main?main.flag+' '+main.name:'بدون کشور'} | 💰 ${faNum(ou.money||0)}</div></div><div class="actions">${!isAlly?`<button class="btn small blue" data-ally="${un}">🤝</button>`:''}<button class="btn small spy" data-spy="${un}">🕵️</button><button class="btn small danger" data-attack="${un}">⚔️</button></div>`;
     box.appendChild(div);
   });
-  box.querySelectorAll('[data-ally]').forEach(b=>b.onclick=()=>{socket.emit('alliance_request',{from:myName,to:b.dataset.ally});toast('درخواست ارسال شد',true)});
+  box.querySelectorAll('[data-ally]').forEach(b=>b.onclick=()=>{socket.emit('alliance_request',{from:myName,to:b.dataset.ally});toast('درخواست اتحاد ارسال شد (فقط خودش می‌بینه)',true)});
   box.querySelectorAll('[data-spy]').forEach(b=>b.onclick=()=>spyOn(b.dataset.spy));
   box.querySelectorAll('[data-attack]').forEach(b=>b.onclick=()=>openAttackModal(b.dataset.attack));
 }
 
-// 🕵️ جاسوسی
 function spyOn(target){
   const u=currentPlayer();if(!u)return;
   if(u.money<500){toast('موجودی برای جاسوسی کافی نیست (۵۰۰ میلیارد)');return}
@@ -480,7 +481,6 @@ function showSpyResult(data){
   document.getElementById('closeSpy').onclick=()=>document.getElementById('overlay').classList.remove('active');
 }
 
-// 🏆 جدول امتیازات
 function renderLeaderboard(){
   const list=document.getElementById('leaderboardList');if(!list)return;
   list.innerHTML='';
@@ -544,19 +544,21 @@ function renderChat(){
 document.getElementById('chatForm').onsubmit=(e)=>{e.preventDefault();const inp=document.getElementById('chatInput');const txt=inp.value.trim();if(!txt)return;socket.emit('chat',{name:myName,text:txt});inp.value=''};
 
 function renderNotifications(){
-  const u=currentPlayer();if(!u)return;
   const list=document.getElementById('notifList');
   const badge=document.getElementById('notifBadge');
   list.innerHTML='';
-  if(!u.notifications||u.notifications.length===0){list.innerHTML='<div class="empty">هیچ اعلانی نداری</div>';badge.classList.add('hidden');return}
-  const unread=u.notifications.filter(n=>!n.read).length;
+  if(!myNotifications||myNotifications.length===0){list.innerHTML='<div class="empty">هیچ اعلانی نداری</div>';badge.classList.add('hidden');return}
+  const unread=myNotifications.filter(n=>!n.read).length;
   if(unread>0){badge.textContent=unread;badge.classList.remove('hidden')}else badge.classList.add('hidden');
-  [...u.notifications].reverse().forEach(n=>{
+  [...myNotifications].reverse().forEach(n=>{
     const div=document.createElement('div');
     div.className='notif '+(n.read?'':'unread')+' '+(n.type||'');
     let txt='';
-    if(n.type==='alliance')txt=`🤝 ${n.from} درخواست اتحاد داد`;
-    else if(n.type==='attack')txt=`⚔️ ${n.from} حمله کرد! قدرت: ${faNum(n.power)}`;
+    if(n.type==='alliance')txt=`🤝 ${n.from} درخواست اتحاد داد (فقط تو می‌بینی)`;
+    else if(n.type==='alliance_accepted')txt=`✅ ${n.from} درخواست اتحادت رو قبول کرد`;
+    else if(n.type==='alliance_rejected')txt=`❌ ${n.from} درخواست اتحادت رو رد کرد`;
+    else if(n.type==='attack')txt=`⚔️ ${n.from} به تو حمله کرد! قدرت: ${faNum(n.power)}`;
+    else if(n.type==='attack_success')txt=`🎉 حمله‌ات به ${n.to} موفق بود! کشورش رو گرفتی`;
     else if(n.type==='income')txt=`💰 درآمد روزانه: ${faNum(n.amount)}`;
     div.innerHTML=`<div class="txt">${txt}</div><div class="time">${n.time||''}</div>`;
     if(n.type==='alliance'&&n.status==='pending'){const acts=document.createElement('div');acts.className='acts';acts.innerHTML=`<button class="btn small" data-acc="${n.id}">قبول</button><button class="btn small danger" data-rej="${n.id}">رد</button>`;div.appendChild(acts)}
@@ -570,7 +572,7 @@ function renderNotifications(){
 
 function openDefenseModal(notifId){
   const u=currentPlayer();if(!u)return;
-  const n=u.notifications.find(x=>x.id===notifId);
+  const n=myNotifications.find(x=>x.id===notifId);
   if(!n||n.type!=='attack'||n.status!=='pending')return;
   const modal=document.getElementById('modal');
   const defenseCats=CATEGORIES.filter(c=>['defense','tank','infantry','navy'].includes(c.id));
