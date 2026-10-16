@@ -21,7 +21,7 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;background:radial-gradi
 .auth-box .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
 #authForm{display:flex;flex-direction:column;gap:10px}
 #authForm input{padding:12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:var(--txt);font-family:inherit;font-size:14px;text-align:center}
-#authForm input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 15px #ff450066}
+#authForm input:focus{outline:none;border-color:var(--gold)}
 #authForm button{padding:12px;border-radius:10px;border:none;background:linear-gradient(90deg,#ff4500,#ff8800);color:#fff;font-weight:bold;font-size:15px;cursor:pointer;font-family:inherit}
 .error{color:var(--red);font-size:13px;min-height:18px;margin-top:10px}
 #loadingMsg{color:var(--gold);font-size:13px;margin-top:10px;min-height:18px}
@@ -76,6 +76,7 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
 .btn.danger{background:linear-gradient(90deg,#cc0000,#ff2200);color:#fff}
 .btn.blue{background:linear-gradient(90deg,#0055cc,#0088ff);color:#fff}
 .btn.spy{background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff}
+.btn.pm{background:linear-gradient(90deg,#0088aa,#00bbcc);color:#fff}
 .btn.small{padding:5px 10px;font-size:12px}
 .player{display:flex;align-items:center;gap:10px;padding:11px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:11px;margin-bottom:8px}
 .player .dot{width:9px;height:9px;border-radius:50%;background:#555}
@@ -85,15 +86,17 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
 .player .pmeta{font-size:11.5px;color:var(--muted);margin-top:3px}
 .player .actions{display:flex;gap:6px;flex-wrap:wrap}
 #chatBox{height:400px;overflow-y:auto;background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+#pmBox{height:400px;overflow-y:auto;background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
 .msg{background:rgba(0,0,0,.3);border-radius:10px;padding:9px 12px;font-size:13px;white-space:pre-wrap;line-height:1.7;border-right:3px solid var(--line)}
 .msg.attack{border-right-color:#ff3b1f;background:#2a0505}
-.msg.defense{border-right-color:#0088ff;background:#0a0a2a}
 .msg.result{border-right-color:#ffb84d;background:#2a1a05}
 .msg.ally{border-right-color:#6ee06e;background:#052a0a}
 .msg.income{border-right-color:#2ecc71;background:#052a0a}
+.msg.mine{border-right-color:#00bbcc;background:#062a30}
+.msg.other{border-right-color:#ffb84d;background:#2a1a05}
 .msg .who{color:#ffb84d;font-weight:bold;font-size:12px}
-#chatForm{display:flex;gap:8px}
-#chatForm input{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:var(--txt);font-family:inherit}
+#chatForm,#pmForm{display:flex;gap:8px}
+#chatForm input,#pmForm input{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:var(--txt);font-family:inherit}
 .notif{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;border-right:3px solid var(--line)}
 .notif.unread{border-right-color:var(--gold);background:#2a1a05}
 .notif.attack{border-right-color:#ff3b1f}
@@ -128,6 +131,12 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
 #connStatus.ok{background:linear-gradient(90deg,#008a00,#3fb950);color:#fff}
 #connStatus.err{background:linear-gradient(90deg,#8a0000,#cc0000);color:#fff}
 .medal{font-size:24px;width:40px;text-align:center}
+.pm-list-item{display:flex;align-items:center;gap:10px;padding:12px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;cursor:pointer}
+.pm-list-item:hover{border-color:var(--gold)}
+.pm-list-item .pm-avatar{font-size:24px}
+.pm-list-item .pm-info{flex:1;min-width:0}
+.pm-list-item .pm-name{font-size:13.5px;font-weight:bold;color:#ffb84d}
+.pm-list-item .pm-preview{font-size:11.5px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -143,7 +152,6 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
     </form>
     <div id="authError" class="error"></div>
     <div id="loadingMsg"></div>
-    <p class="sub" style="margin-top:14px;font-size:11px">اگه اسمت جدید باشه، حساب جدید ساخته می‌شه. اگه قبلاً ثبت‌نام کردی، همون پسورد قبلی رو بزن.</p>
   </div>
 </div>
 
@@ -169,7 +177,7 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
     <button data-tab="market">🛒 بازار</button>
     <button data-tab="war">⚔️ جنگ</button>
     <button data-tab="chat">💬 چت</button>
-    <button data-tab="board">🏆 جدول</button>
+    <button data-tab="pm">📩 خصوصی <span id="pmBadge" class="badge hidden">0</span></button>
     <button data-tab="notif">🔔 اعلان‌ها <span id="notifBadge" class="badge hidden">0</span></button>
   </nav>
   <div class="tab-panel active" id="tab-home">
@@ -203,10 +211,10 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
       </form>
     </div>
   </div>
-  <div class="tab-panel" id="tab-board">
+  <div class="tab-panel" id="tab-pm">
     <div class="card">
-      <h3>🏆 جدول امتیازات</h3>
-      <div id="leaderboardList"></div>
+      <h3>📩 پیام‌های خصوصی</h3>
+      <div id="pmList"></div>
     </div>
   </div>
   <div class="tab-panel" id="tab-notif">
@@ -226,6 +234,7 @@ const CATEGORIES=[
 {id:'tank',name:'تانک‌ها',emoji:'🚜'},
 {id:'infantry',name:'پیاده‌نظام',emoji:'🪖'},
 {id:'navy',name:'ناوها',emoji:'🚢'},
+{id:'airforce',name:'نیروی هوایی',emoji:'✈️'},
 {id:'defense',name:'پدافند و دفاع',emoji:'🛡️'}
 ];
 
@@ -254,8 +263,12 @@ const ITEMS=[
 {id:'navy_destroyer',cat:'navy',name:'ناوشکن',emoji:'🚢',desc:'متوسط',price:1600,attack:420,defense:260},
 {id:'navy_cruiser',cat:'navy',name:'ناو',emoji:'🚢',desc:'قوی',price:2700,attack:720,defense:420},
 {id:'navy_carrier',cat:'navy',name:'ناو هواپیمابر',emoji:'🛳️',desc:'قوی‌ترین',price:5000,attack:1300,defense:750},
+{id:'air_fighter',cat:'airforce',name:'جنگنده',emoji:'🛩️',desc:'سریع و دقیق',price:900,attack:300,defense:0},
+{id:'air_bomber',cat:'airforce',name:'بمب‌افکن',emoji:'💣',desc:'قدرت حمله بالا',price:2000,attack:600,defense:0},
+{id:'air_drone',cat:'airforce',name:'پهپاد',emoji:'🎛️',desc:'ارزان و دقیق',price:400,attack:120,defense:0},
+{id:'air_stealth',cat:'airforce',name:'جنگنده رادارگریز',emoji:'🛸',desc:'نامرئی، فوق‌قدرتمند',price:4200,attack:1000,defense:0},
 {id:'def_basic',cat:'defense',name:'سپر پایه',emoji:'🛡️',desc:'ساده',price:400,attack:0,defense:180},
-{id:'def_antiair',cat:'defense',name:'پدافند هوایی',emoji:'🎯',desc:'ضد موشک',price:1000,attack:0,defense:380},
+{id:'def_antiair',cat:'defense',name:'پدافند هوایی',emoji:'🎯',desc:'ضد موشک و هواپیما',price:1000,attack:0,defense:380},
 {id:'def_advanced',cat:'defense',name:'پدافند پیشرفته',emoji:'🛰️',desc:'S-400',price:2200,attack:0,defense:800},
 {id:'def_bunker',cat:'defense',name:'سنگر فرماندهی',emoji:'🏰',desc:'سنگین',price:1800,attack:0,defense:650}
 ];
@@ -276,9 +289,10 @@ let myName=null;
 let players={};
 let chat=[];
 let myNotifications=[];
+let myPrivateMessages=[];
+let currentPMChat=null;
 
 function faNum(n){return n.toLocaleString('fa-IR')}
-function now(){return new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'})}
 function getCountry(id){return COUNTRIES.find(c=>c.id===id)}
 function getItem(id){return ITEMS.find(i=>i.id===id)}
 function toast(msg,ok){const t=document.getElementById('toast');t.textContent=msg;t.className=ok?'ok show':'show';clearTimeout(t._tm);t._tm=setTimeout(()=>t.className='',3000)}
@@ -301,6 +315,8 @@ function connectSocket(){
   socket.on('chat',(data)=>{chat=data||[];renderChat()});
   socket.on('error_msg',(msg)=>toast(msg));
   socket.on('my_notifications',(data)=>{myNotifications=data||[];renderNotifications()});
+  socket.on('my_private_messages',(data)=>{myPrivateMessages=data||[];renderPMList();updatePMBadge()});
+  socket.on('private_chat_history',(data)=>{renderPMChat(data)});
   socket.on('spy_result',(data)=>{showSpyResult(data)});
   socket.on('login_result',(res)=>{
     const err=document.getElementById('authError');
@@ -342,7 +358,7 @@ document.getElementById('authForm').onsubmit=(e)=>{
 };
 
 document.getElementById('btnLogout').onclick=()=>{
-  myName=null;myNotifications=[];showScreen('screen-auth');
+  myName=null;myNotifications=[];myPrivateMessages=[];currentPMChat=null;showScreen('screen-auth');
   document.getElementById('inpUser').value='';
   document.getElementById('inpPass').value='';
   document.getElementById('authError').textContent='';
@@ -357,7 +373,8 @@ function refreshGame(){
   document.getElementById('hDailyIncome').textContent=faNum(calcDailyIncome(u));
   const main=u.countries&&u.countries[0]?getCountry(u.countries[0]):null;
   document.getElementById('hCountry').textContent=main?main.flag+' '+main.name:'بدون کشور';
-  renderHome();renderMarket();renderWar();renderChat();renderNotifications();
+  renderHome();renderMarket();renderWar();renderChat();renderNotifications();updatePMBadge();
+  if(currentPMChat)renderPMList();
 }
 
 function renderCountrySelection(){
@@ -441,10 +458,11 @@ function renderWar(){
     const main=ou.countries&&ou.countries[0]?getCountry(ou.countries[0]):null;
     const isAlly=u.allies&&u.allies.includes(un);
     const div=document.createElement('div');div.className='player';
-    div.innerHTML=`<div class="dot ${ou.online?'on':''}"></div><div class="pinfo"><div class="pname">${un} ${isAlly?'🤝':''}</div><div class="pmeta">${main?main.flag+' '+main.name:'بدون کشور'} | 💰 ${faNum(ou.money||0)}</div></div><div class="actions">${!isAlly?`<button class="btn small blue" data-ally="${un}">🤝</button>`:''}<button class="btn small spy" data-spy="${un}">🕵️</button><button class="btn small danger" data-attack="${un}">⚔️</button></div>`;
+    div.innerHTML=`<div class="dot ${ou.online?'on':''}"></div><div class="pinfo"><div class="pname">${un} ${isAlly?'🤝':''}</div><div class="pmeta">${main?main.flag+' '+main.name:'بدون کشور'} | 💰 ${faNum(ou.money||0)}</div></div><div class="actions">${!isAlly?`<button class="btn small blue" data-ally="${un}">🤝</button>`:''}<button class="btn small pm" data-pm="${un}">📩</button><button class="btn small spy" data-spy="${un}">🕵️</button><button class="btn small danger" data-attack="${un}">⚔️</button></div>`;
     box.appendChild(div);
   });
-  box.querySelectorAll('[data-ally]').forEach(b=>b.onclick=()=>{socket.emit('alliance_request',{from:myName,to:b.dataset.ally});toast('درخواست اتحاد ارسال شد (فقط خودش می‌بینه)',true)});
+  box.querySelectorAll('[data-ally]').forEach(b=>b.onclick=()=>{socket.emit('alliance_request',{from:myName,to:b.dataset.ally});toast('درخواست اتحاد ارسال شد',true)});
+  box.querySelectorAll('[data-pm]').forEach(b=>b.onclick=()=>openPMChat(b.dataset.pm));
   box.querySelectorAll('[data-spy]').forEach(b=>b.onclick=()=>spyOn(b.dataset.spy));
   box.querySelectorAll('[data-attack]').forEach(b=>b.onclick=()=>openAttackModal(b.dataset.attack));
 }
@@ -481,32 +499,105 @@ function showSpyResult(data){
   document.getElementById('closeSpy').onclick=()=>document.getElementById('overlay').classList.remove('active');
 }
 
-function renderLeaderboard(){
-  const list=document.getElementById('leaderboardList');if(!list)return;
-  list.innerHTML='';
-  const arr=Object.values(players);
-  if(arr.length===0){list.innerHTML='<div class="empty">هنوز بازیکنی نیست</div>';return}
-  arr.forEach(p=>{
-    let mil=0;
-    for(const id in p.inventory||{}){const it=getItem(id);if(it)mil+=(it.attack+it.defense)*p.inventory[id]}
-    p._military=mil;p._countries=(p.countries||[]).length;
+// 💬 چت خصوصی
+function openPMChat(target){
+  currentPMChat=target;
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector('nav.tabs button[data-tab="pm"]').classList.add('active');
+  document.getElementById('tab-pm').classList.add('active');
+  socket.emit('load_private_chat',{user:myName,with:target});
+  renderPMList();
+}
+
+function renderPMList(){
+  const list=document.getElementById('pmList');
+  if(!list)return;
+  // اگر توی چت با یک نفر هستیم، چت رو نشون بده
+  if(currentPMChat){
+    list.innerHTML=`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <button class="btn ghost small" id="backPMList">⬅️ برگشت</button>
+        <div style="flex:1;font-weight:bold;color:#ffb84d">📩 چت با ${currentPMChat}</div>
+      </div>
+      <div id="pmBox"></div>
+      <form id="pmForm">
+        <input id="pmInput" placeholder="پیام..." autocomplete="off">
+        <button type="submit" class="btn">ارسال</button>
+      </form>
+    `;
+    document.getElementById('backPMList').onclick=()=>{currentPMChat=null;renderPMList()};
+    document.getElementById('pmForm').onsubmit=(e)=>{
+      e.preventDefault();
+      const inp=document.getElementById('pmInput');
+      const txt=inp.value.trim();
+      if(!txt)return;
+      socket.emit('private_chat',{from:myName,to:currentPMChat,text:txt});
+      inp.value='';
+    };
+    // رندر پیام‌ها
+    socket.emit('load_private_chat',{user:myName,with:currentPMChat});
+    return;
+  }
+  // لیست همه‌ی گفتگوها
+  const convs={};
+  (myPrivateMessages||[]).forEach(m=>{
+    const other=m.from===myName?m.to:m.from;
+    if(!convs[other])convs[other]={other,last:m};
+    else if(new Date(m.createdAt)>new Date(convs[other].last.createdAt))convs[other].last=m;
   });
-  arr.sort((a,b)=>{const pa=(a.money||0)+a._military*10+a._countries*1000;const pb=(b.money||0)+b._military*10+b._countries*1000;return pb-pa});
-  arr.forEach((p,idx)=>{
-    const medal=idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':`${idx+1}.`;
-    const div=document.createElement('div');div.className='player';
-    if(idx<3)div.style.borderRight='3px solid var(--gold)';
-    div.innerHTML=`<div class="medal">${medal}</div><div class="pinfo"><div class="pname">${p.name} ${p.online?'🟢':''}</div><div class="pmeta">💰 ${faNum(p.money||0)} | ⚔️ ${faNum(p._military)} | 🏳️ ${p._countries}</div></div>`;
+  const keys=Object.keys(convs);
+  if(keys.length===0){list.innerHTML='<div class="empty">هنوز پیام خصوصی نداری. از تب جنگ، روی 📩 کنار هر بازیکن بزن.</div>';return}
+  list.innerHTML='';
+  keys.forEach(k=>{
+    const c=convs[k];
+    const div=document.createElement('div');
+    div.className='pm-list-item';
+    div.innerHTML=`<div class="pm-avatar">👤</div><div class="pm-info"><div class="pm-name">${c.other}</div><div class="pm-preview">${c.last.text}</div></div>`;
+    div.onclick=()=>openPMChat(c.other);
     list.appendChild(div);
   });
+}
+
+function renderPMChat(data){
+  const box=document.getElementById('pmBox');
+  if(!box)return;
+  box.innerHTML='';
+  (data.messages||[]).forEach(m=>{
+    const d=document.createElement('div');
+    d.className='msg '+(m.from===myName?'mine':'other');
+    d.innerHTML=`<div class="who">${m.from===myName?'من':m.from} • ${m.time}</div>${m.text}`;
+    box.appendChild(d);
+  });
+  box.scrollTop=box.scrollHeight;
+}
+
+function updatePMBadge(){
+  // شمارش پیام‌های خونده‌نشده از دیگران
+  const unread=(myPrivateMessages||[]).filter(m=>m.from!==myName).length;
+  const badge=document.getElementById('pmBadge');
+  if(!badge)return;
+  if(unread>0&&!currentPMChat){badge.textContent=unread;badge.classList.remove('hidden')}
+  else badge.classList.add('hidden');
 }
 
 function openAttackModal(target){
   const u=currentPlayer();if(!u)return;
   const tu=players[target];if(!tu)return;
+  // چک محدودیت
+  const cd=u.attackCooldowns&&u.attackCooldowns[target];
+  if(cd){
+    const remain=10*60*1000-(Date.now()-cd);
+    if(remain>0){
+      const min=Math.ceil(remain/60000);
+      toast(`به ${target} باید ${min} دقیقه دیگه صبر کنی`);
+      return;
+    }
+  }
+  if(!confirm(`مطمئنی می‌خوای به ${target} حمله کنی؟`))return;
   const targetCountry=tu.countries&&tu.countries[0]?getCountry(tu.countries[0]):null;
   const modal=document.getElementById('modal');
-  const attackCats=CATEGORIES.filter(c=>['missile','tank','infantry','navy'].includes(c.id));
+  const attackCats=CATEGORIES.filter(c=>['missile','tank','infantry','navy','airforce'].includes(c.id));
   const hasAny=attackCats.some(cat=>ITEMS.some(it=>it.cat===cat.id&&it.attack>0&&u.inventory&&u.inventory[it.id]>0));
   if(!hasAny){toast('هیچ وسیله حمله‌ای نداری!');return}
   let bodyHtml='';
@@ -602,7 +693,7 @@ function openDefenseModal(notifId){
   };
 }
 
-document.querySelectorAll('nav.tabs button').forEach(btn=>{btn.onclick=()=>{document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+btn.dataset.tab).classList.add('active');if(btn.dataset.tab==='notif')renderNotifications();if(btn.dataset.tab==='war')renderWar();if(btn.dataset.tab==='home')renderHome();if(btn.dataset.tab==='board')renderLeaderboard()}});
+document.querySelectorAll('nav.tabs button').forEach(btn=>{btn.onclick=()=>{document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+btn.dataset.tab).classList.add('active');if(btn.dataset.tab==='notif')renderNotifications();if(btn.dataset.tab==='war')renderWar();if(btn.dataset.tab==='home')renderHome();if(btn.dataset.tab==='pm')renderPMList()}});
 
 setInterval(()=>{if(myName&&currentPlayer())renderHome()},30000);
 </script>
