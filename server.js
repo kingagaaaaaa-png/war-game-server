@@ -24,8 +24,10 @@ const MONGODB_URI = 'mongodb+srv://wargame:62636362f@war-game-cluster.sk142uv.mo
 let playersCollection = null;
 let chatCollection = null;
 const playerSockets = {};
+const lastPing = {};
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ATTACK_COOLDOWN_MS = 10 * 60 * 1000;
+const PING_TIMEOUT_MS = 2 * 60 * 1000;
 
 const INCOME_ITEMS = {
   farm: 2500, oil_small: 2800, mine: 3200, tourism: 3800,
@@ -134,6 +136,7 @@ io.on('connection', (socket) => {
       if (socket.playerName) delete playerSockets[socket.playerName];
       socket.playerName = name;
       playerSockets[name] = socket;
+      lastPing[name] = Date.now();
       await savePlayerToDB(newPlayer);
       socket.emit('login_result', { ok: true, isNew: true });
       socket.emit('my_notifications', newPlayer.notifications);
@@ -149,12 +152,17 @@ io.on('connection', (socket) => {
     if (socket.playerName) delete playerSockets[socket.playerName];
     socket.playerName = name;
     playerSockets[name] = socket;
+    lastPing[name] = Date.now();
     await savePlayerToDB(existing);
     socket.emit('login_result', { ok: true, isNew: false });
     socket.emit('my_notifications', existing.notifications || []);
     socket.emit('my_private_messages', existing.privateMessages);
     io.emit('players', getPublicPlayers());
     socket.emit('chat_history', gameState.chat);
+  });
+
+  socket.on('ping', () => {
+    if (socket.playerName) lastPing[socket.playerName] = Date.now();
   });
 
   socket.on('buy', async (data) => {
@@ -360,6 +368,7 @@ io.on('connection', (socket) => {
     if (socket.playerName && gameState.players[socket.playerName]) {
       gameState.players[socket.playerName].online = false;
       delete playerSockets[socket.playerName];
+      delete lastPing[socket.playerName];
       await savePlayerToDB(gameState.players[socket.playerName]);
       io.emit('players', getPublicPlayers());
     }
@@ -411,6 +420,25 @@ async function processDailyIncome() {
 }
 
 setInterval(processDailyIncome, 30 * 1000);
+
+setInterval(async () => {
+  const now = Date.now();
+  let changed = false;
+  for (const name in gameState.players) {
+    const p = gameState.players[name];
+    if (!p.online) continue;
+    const lp = lastPing[name] || 0;
+    if (now - lp > PING_TIMEOUT_MS) {
+      p.online = false;
+      delete playerSockets[name];
+      delete lastPing[name];
+      await savePlayerToDB(p);
+      changed = true;
+      console.log(`🚪 ${name} خودکار آفلاین شد`);
+    }
+  }
+  if (changed) io.emit('players', getPublicPlayers());
+}, 30 * 1000);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
