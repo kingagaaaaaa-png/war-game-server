@@ -5,7 +5,6 @@ const { MongoClient } = require('mongodb');
 
 const app = express();
 app.use(express.json());
-
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -17,8 +16,7 @@ app.use((req, res, next) => {
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: false },
-  transports: ['websocket', 'polling'],
-  allowEIO3: true
+  transports: ['websocket', 'polling'], allowEIO3: true
 });
 
 const MONGODB_URI = 'mongodb+srv://wargame:62636362f@war-game-cluster.sk142uv.mongodb.net/?appName=war-game-cluster';
@@ -26,40 +24,24 @@ const MONGODB_URI = 'mongodb+srv://wargame:62636362f@war-game-cluster.sk142uv.mo
 let playersCollection = null;
 let chatCollection = null;
 const playerSockets = {};
-
-// ⏰ تنظیمات درآمد خودکار
-// برای تست سریع، این رو بذار 60 * 1000 (۱ دقیقه)
-// برای بازی واقعی، 24 * 60 * 60 * 1000 (۲۴ ساعت)
 const DAY_MS = 24 * 60 * 60 * 1000;
+const ATTACK_COOLDOWN_MS = 10 * 60 * 1000;
 
-// درآمد روزانه‌ی هر منبع (باید با ITEMS توی index.html یکی باشه)
 const INCOME_ITEMS = {
-  farm: 2500,
-  oil_small: 2800,
-  mine: 3200,
-  tourism: 3800,
-  gas: 4200,
-  oil_big: 6000,
-  tech: 8000
+  farm: 2500, oil_small: 2800, mine: 3200, tourism: 3800,
+  gas: 4200, oil_big: 6000, tech: 8000
 };
 
 async function connectMongoDB() {
-  console.log('🔌 اتصال به MongoDB...');
   try {
-    const client = new MongoClient(MONGODB_URI, {
-      serverSelectionTimeoutMS: 10000,
-      connectTimeoutMS: 10000
-    });
+    const client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 10000, connectTimeoutMS: 10000 });
     await client.connect();
     const db = client.db('war_game');
     playersCollection = db.collection('players');
     chatCollection = db.collection('chat');
     console.log('✅ MongoDB وصل شد');
     await playersCollection.createIndex({ name: 1 }, { unique: true });
-    console.log('✅ ایندکس ساخته شد');
-  } catch (err) {
-    console.error('❌ خطا در اتصال MongoDB:', err.message);
-  }
+  } catch (err) { console.error('❌ خطا:', err.message); }
 }
 
 const gameState = { players: {}, chat: [] };
@@ -69,13 +51,13 @@ function getPublicPlayers() {
   for (const name in gameState.players) {
     const p = gameState.players[name];
     out[name] = {
-      name: p.name,
-      money: p.money,
+      name: p.name, money: p.money,
       countries: p.countries || [],
       inventory: p.inventory || {},
       allies: p.allies || [],
       online: p.online,
-      lastIncomeTime: p.lastIncomeTime
+      lastIncomeTime: p.lastIncomeTime,
+      attackCooldowns: p.attackCooldowns || {}
     };
   }
   return out;
@@ -91,9 +73,14 @@ async function loadPlayersFromDB() {
   if (!playersCollection) return;
   try {
     const players = await playersCollection.find({}).toArray();
-    players.forEach(p => { p.online = false; gameState.players[p.name] = p; });
+    players.forEach(p => {
+      p.online = false;
+      p.attackCooldowns = p.attackCooldowns || {};
+      p.privateMessages = p.privateMessages || [];
+      gameState.players[p.name] = p;
+    });
     console.log(`✅ ${players.length} بازیکن لود شد`);
-  } catch (err) { console.error('خطا:', err.message); }
+  } catch (err) { console.error(err.message); }
 }
 
 async function loadChatFromDB() {
@@ -101,8 +88,7 @@ async function loadChatFromDB() {
   try {
     const msgs = await chatCollection.find({}).sort({ createdAt: -1 }).limit(200).toArray();
     gameState.chat = msgs.reverse();
-    console.log(`✅ ${gameState.chat.length} پیام لود شد`);
-  } catch (err) { console.error('خطا:', err.message); }
+  } catch (err) { console.error(err.message); }
 }
 
 async function savePlayerToDB(player) {
@@ -110,18 +96,17 @@ async function savePlayerToDB(player) {
   try {
     const { _id, ...data } = player;
     await playersCollection.updateOne({ name: player.name }, { $set: data }, { upsert: true });
-  } catch (err) { console.error('خطا در ذخیره:', err.message); }
+  } catch (err) { console.error(err.message); }
 }
 
 async function saveChatToDB(msg) {
   if (!chatCollection) return;
-  try { await chatCollection.insertOne(msg); } catch (err) { console.error('خطا:', err.message); }
+  try { await chatCollection.insertOne(msg); } catch (err) { console.error(err.message); }
 }
 
 app.get('/', (req, res) => {
   res.json({
-    status: 'ok',
-    message: 'سرور بازی جنگ جهانی روشنه',
+    status: 'ok', message: 'سرور بازی جنگ جهانی روشنه',
     players: Object.keys(gameState.players).length,
     mongodb: playersCollection ? 'connected' : 'disconnected',
     time: new Date().toISOString()
@@ -129,8 +114,6 @@ app.get('/', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  console.log('بازیکن وصل شد:', socket.id);
-
   socket.on('login', async ({ name, password }) => {
     if (!name || !password) { socket.emit('login_result', { ok: false, error: 'اسم و پسورد لازمه' }); return; }
     let existing = gameState.players[name];
@@ -143,7 +126,9 @@ io.on('connection', (socket) => {
     if (!existing) {
       const newPlayer = {
         name, password, money: 16000, countries: [], inventory: {},
-        allies: [], notifications: [], online: true, lastIncomeTime: Date.now()
+        allies: [], notifications: [], online: true,
+        lastIncomeTime: Date.now(),
+        attackCooldowns: {}, privateMessages: []
       };
       gameState.players[name] = newPlayer;
       if (socket.playerName) delete playerSockets[socket.playerName];
@@ -152,22 +137,24 @@ io.on('connection', (socket) => {
       await savePlayerToDB(newPlayer);
       socket.emit('login_result', { ok: true, isNew: true });
       socket.emit('my_notifications', newPlayer.notifications);
+      socket.emit('my_private_messages', newPlayer.privateMessages);
       io.emit('players', getPublicPlayers());
       socket.emit('chat_history', gameState.chat);
-      console.log('✅ بازیکن جدید:', name);
       return;
     }
     if (existing.password !== password) { socket.emit('login_result', { ok: false, error: 'پسورد اشتباهه!' }); return; }
     existing.online = true;
+    existing.attackCooldowns = existing.attackCooldowns || {};
+    existing.privateMessages = existing.privateMessages || [];
     if (socket.playerName) delete playerSockets[socket.playerName];
     socket.playerName = name;
     playerSockets[name] = socket;
     await savePlayerToDB(existing);
     socket.emit('login_result', { ok: true, isNew: false });
     socket.emit('my_notifications', existing.notifications || []);
+    socket.emit('my_private_messages', existing.privateMessages);
     io.emit('players', getPublicPlayers());
     socket.emit('chat_history', gameState.chat);
-    console.log('✅ وارد شد:', name);
   });
 
   socket.on('buy', async (data) => {
@@ -203,16 +190,56 @@ io.on('connection', (socket) => {
     addChat(`${name}: ${text}`, 'normal');
   });
 
+  socket.on('private_chat', async (data) => {
+    const { from, to, text } = data;
+    const sender = gameState.players[from];
+    const receiver = gameState.players[to];
+    if (!sender || !receiver || !text) return;
+    const msg = {
+      id: Date.now() + Math.random(),
+      from, to, text,
+      time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date()
+    };
+    sender.privateMessages = sender.privateMessages || [];
+    receiver.privateMessages = receiver.privateMessages || [];
+    sender.privateMessages.push({ ...msg, mine: true });
+    receiver.privateMessages.push({ ...msg, mine: false });
+    if (sender.privateMessages.length > 500) sender.privateMessages = sender.privateMessages.slice(-500);
+    if (receiver.privateMessages.length > 500) receiver.privateMessages = receiver.privateMessages.slice(-500);
+    await savePlayerToDB(sender);
+    await savePlayerToDB(receiver);
+    if (playerSockets[from]) playerSockets[from].emit('my_private_messages', sender.privateMessages);
+    if (playerSockets[to]) playerSockets[to].emit('my_private_messages', receiver.privateMessages);
+  });
+
+  socket.on('load_private_chat', (data) => {
+    const { user, with: other } = data;
+    const p = gameState.players[user];
+    if (!p) return;
+    const msgs = (p.privateMessages || []).filter(m => m.from === other || m.to === other);
+    socket.emit('private_chat_history', { with: other, messages: msgs });
+  });
+
   socket.on('attack', async (data) => {
     const { from, to, selected, power, scenario } = data;
     const attacker = gameState.players[from];
     const defender = gameState.players[to];
     if (!attacker || !defender) return;
     if (from === to) { socket.emit('error_msg', 'نمی‌تونی به خودت حمله کنی!'); return; }
+    attacker.attackCooldowns = attacker.attackCooldowns || {};
+    const lastAtk = attacker.attackCooldowns[to] || 0;
+    const remain = ATTACK_COOLDOWN_MS - (Date.now() - lastAtk);
+    if (remain > 0) {
+      const min = Math.ceil(remain / 60000);
+      socket.emit('error_msg', `به ${to} باید ${min} دقیقه دیگه صبر کنی`);
+      return;
+    }
     for (const id in selected) {
       attacker.inventory[id] = (attacker.inventory[id] || 0) - selected[id];
       if (attacker.inventory[id] <= 0) delete attacker.inventory[id];
     }
+    attacker.attackCooldowns[to] = Date.now();
     defender.notifications.push({
       id: Date.now() + Math.random(), type: 'attack', from, selected, power, status: 'pending',
       time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }), read: false
@@ -236,7 +263,6 @@ io.on('connection', (socket) => {
     await savePlayerToDB(target);
     io.emit('players', getPublicPlayers());
     sendMyNotifications(to);
-    console.log(`🤝 ${from} به ${to} درخواست اتحاد داد (خصوصی)`);
   });
 
   socket.on('alliance_response', async (data) => {
@@ -320,7 +346,7 @@ io.on('connection', (socket) => {
     const target = gameState.players[to];
     if (!spy || !target) return;
     const cost = 500;
-    if (spy.money < cost) { socket.emit('error_msg', 'موجودی برای جاسوسی کافی نیست (۵۰۰ میلیارد)'); return; }
+    if (spy.money < cost) { socket.emit('error_msg', 'موجودی برای جاسوسی کافی نیست'); return; }
     spy.money -= cost;
     await savePlayerToDB(spy);
     io.emit('players', getPublicPlayers());
@@ -336,7 +362,6 @@ io.on('connection', (socket) => {
       delete playerSockets[socket.playerName];
       await savePlayerToDB(gameState.players[socket.playerName]);
       io.emit('players', getPublicPlayers());
-      console.log(socket.playerName, 'خارج شد');
     }
   });
 });
@@ -353,9 +378,6 @@ function addChat(text, type = 'normal') {
   io.emit('chat', gameState.chat);
 }
 
-// ==========================
-// 💰 درآمد خودکار روزانه
-// ==========================
 async function processDailyIncome() {
   const now = Date.now();
   let changed = false;
@@ -364,32 +386,22 @@ async function processDailyIncome() {
     if (!p.lastIncomeTime) { p.lastIncomeTime = now; continue; }
     const elapsed = now - p.lastIncomeTime;
     if (elapsed < DAY_MS) continue;
-
-    // محاسبه‌ی درآمد روزانه
     let incomePerDay = 0;
     for (const id in p.inventory || {}) {
       if (INCOME_ITEMS[id]) incomePerDay += INCOME_ITEMS[id] * p.inventory[id];
     }
-
     const cycles = Math.floor(elapsed / DAY_MS);
-
     if (incomePerDay > 0) {
       const total = incomePerDay * cycles;
       p.money += total;
       p.lastIncomeTime += cycles * DAY_MS;
       p.notifications = p.notifications || [];
       p.notifications.push({
-        id: Date.now() + Math.random(),
-        type: 'income',
-        amount: total,
-        time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
-        read: false
+        id: Date.now() + Math.random(), type: 'income', amount: total,
+        time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }), read: false
       });
-      if (playerSockets[name]) {
-        playerSockets[name].emit('my_notifications', p.notifications);
-      }
+      if (playerSockets[name]) playerSockets[name].emit('my_notifications', p.notifications);
       changed = true;
-      console.log(`💰 ${name} ${total} میلیارد درآمد روزانه گرفت (${cycles} روز)`);
     } else {
       p.lastIncomeTime = now;
     }
@@ -398,18 +410,13 @@ async function processDailyIncome() {
   if (changed) io.emit('players', getPublicPlayers());
 }
 
-// هر ۳۰ ثانیه چک کن
 setInterval(processDailyIncome, 30 * 1000);
 
-// ==========================
-// شروع سرور
-// ==========================
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
   console.log('🚀 سرور روی پورت ' + PORT + ' روشن شد');
   await connectMongoDB();
   await loadPlayersFromDB();
   await loadChatFromDB();
-  // بعد از لود، یه بار چک کن
   setTimeout(processDailyIncome, 5000);
 });
