@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>⚔️ جنگ جهانی آنلاین</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;font-family:Vazirmatn,Tahoma,system-ui,sans-serif}
 :root{--panel:#2a0f05;--panel2:#3a1508;--line:#8b2f10;--txt:#fff5e6;--muted:#d69b6e;--green:#3fb950;--red:#ff3b1f;--gold:#ffb84d;--blue:#ff8844}
-body{font-family:Tahoma,system-ui,sans-serif;color:var(--txt);min-height:100vh;padding-bottom:40px;background:#1a0500;overflow-x:hidden;position:relative}
+body{font-family:Vazirmatn,Tahoma,system-ui,sans-serif;color:var(--txt);min-height:100vh;padding-bottom:40px;background:#1a0500;overflow-x:hidden;position:relative}
 body::before{content:'';position:fixed;inset:0;z-index:-2;background:radial-gradient(ellipse at 20% 100%,#ff4500 0%,transparent 50%),radial-gradient(ellipse at 80% 100%,#ff8800 0%,transparent 50%),radial-gradient(ellipse at 50% 0%,#8b0000 0%,transparent 60%),linear-gradient(180deg,#1a0500 0%,#2d0800 40%,#4a0e00 70%,#ff4500 100%);animation:fireGlow 4s ease-in-out infinite alternate}
 body::after{content:'';position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 30% 80%,rgba(255,100,0,.5) 0%,transparent 30%),radial-gradient(circle at 70% 85%,rgba(255,50,0,.5) 0%,transparent 30%);animation:fireFloat 3s ease-in-out infinite alternate;pointer-events:none}
 @keyframes fireGlow{0%{filter:brightness(1)}100%{filter:brightness(1.15)}}
@@ -178,6 +179,7 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
     <button data-tab="war">⚔️ جنگ</button>
     <button data-tab="chat">💬 چت</button>
     <button data-tab="pm">📩 خصوصی <span id="pmBadge" class="badge hidden">0</span></button>
+    <button data-tab="board">🏆 جدول</button>
     <button data-tab="notif">🔔 اعلان‌ها <span id="notifBadge" class="badge hidden">0</span></button>
   </nav>
   <div class="tab-panel active" id="tab-home">
@@ -215,6 +217,12 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
     <div class="card">
       <h3>📩 پیام‌های خصوصی</h3>
       <div id="pmList"></div>
+    </div>
+  </div>
+  <div class="tab-panel" id="tab-board">
+    <div class="card">
+      <h3>🏆 جدول امتیازات</h3>
+      <div id="leaderboardList"></div>
     </div>
   </div>
   <div class="tab-panel" id="tab-notif">
@@ -291,6 +299,7 @@ let chat=[];
 let myNotifications=[];
 let myPrivateMessages=[];
 let currentPMChat=null;
+let pingInterval=null;
 
 function faNum(n){return n.toLocaleString('fa-IR')}
 function getCountry(id){return COUNTRIES.find(c=>c.id===id)}
@@ -307,8 +316,13 @@ function connectSocket(){
     transports:['websocket','polling'],
     reconnection:true,reconnectionAttempts:10,reconnectionDelay:2000,timeout:60000
   });
-  socket.on('connect',()=>{setConn('ok')});
-  socket.on('disconnect',()=>{setConn('err')});
+  socket.on('connect',()=>{
+    setConn('ok');
+    if(pingInterval)clearInterval(pingInterval);
+    pingInterval=setInterval(()=>{if(socket&&socket.connected)socket.emit('ping')},30000);
+    if(myName)socket.emit('ping');
+  });
+  socket.on('disconnect',()=>{setConn('err');if(pingInterval){clearInterval(pingInterval);pingInterval=null}});
   socket.on('connect_error',()=>{setConn('err')});
   socket.on('players',(data)=>{players=data||{};refreshGame()});
   socket.on('chat_history',(data)=>{chat=data||[];renderChat()});
@@ -358,7 +372,9 @@ document.getElementById('authForm').onsubmit=(e)=>{
 };
 
 document.getElementById('btnLogout').onclick=()=>{
-  myName=null;myNotifications=[];myPrivateMessages=[];currentPMChat=null;showScreen('screen-auth');
+  myName=null;myNotifications=[];myPrivateMessages=[];currentPMChat=null;
+  if(pingInterval){clearInterval(pingInterval);pingInterval=null;}
+  showScreen('screen-auth');
   document.getElementById('inpUser').value='';
   document.getElementById('inpPass').value='';
   document.getElementById('authError').textContent='';
@@ -499,7 +515,26 @@ function showSpyResult(data){
   document.getElementById('closeSpy').onclick=()=>document.getElementById('overlay').classList.remove('active');
 }
 
-// 💬 چت خصوصی
+function renderLeaderboard(){
+  const list=document.getElementById('leaderboardList');if(!list)return;
+  list.innerHTML='';
+  const arr=Object.values(players);
+  if(arr.length===0){list.innerHTML='<div class="empty">هنوز بازیکنی نیست</div>';return}
+  arr.forEach(p=>{
+    let mil=0;
+    for(const id in p.inventory||{}){const it=getItem(id);if(it)mil+=(it.attack+it.defense)*p.inventory[id]}
+    p._military=mil;p._countries=(p.countries||[]).length;
+  });
+  arr.sort((a,b)=>{const pa=(a.money||0)+a._military*10+a._countries*1000;const pb=(b.money||0)+b._military*10+b._countries*1000;return pb-pa});
+  arr.forEach((p,idx)=>{
+    const medal=idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':`${idx+1}.`;
+    const div=document.createElement('div');div.className='player';
+    if(idx<3)div.style.borderRight='3px solid var(--gold)';
+    div.innerHTML=`<div class="medal">${medal}</div><div class="pinfo"><div class="pname">${p.name} ${p.online?'🟢':''}</div><div class="pmeta">💰 ${faNum(p.money||0)} | ⚔️ ${faNum(p._military)} | 🏳️ ${p._countries}</div></div>`;
+    list.appendChild(div);
+  });
+}
+
 function openPMChat(target){
   currentPMChat=target;
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
@@ -513,7 +548,6 @@ function openPMChat(target){
 function renderPMList(){
   const list=document.getElementById('pmList');
   if(!list)return;
-  // اگر توی چت با یک نفر هستیم، چت رو نشون بده
   if(currentPMChat){
     list.innerHTML=`
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
@@ -535,11 +569,9 @@ function renderPMList(){
       socket.emit('private_chat',{from:myName,to:currentPMChat,text:txt});
       inp.value='';
     };
-    // رندر پیام‌ها
     socket.emit('load_private_chat',{user:myName,with:currentPMChat});
     return;
   }
-  // لیست همه‌ی گفتگوها
   const convs={};
   (myPrivateMessages||[]).forEach(m=>{
     const other=m.from===myName?m.to:m.from;
@@ -573,7 +605,6 @@ function renderPMChat(data){
 }
 
 function updatePMBadge(){
-  // شمارش پیام‌های خونده‌نشده از دیگران
   const unread=(myPrivateMessages||[]).filter(m=>m.from!==myName).length;
   const badge=document.getElementById('pmBadge');
   if(!badge)return;
@@ -584,7 +615,6 @@ function updatePMBadge(){
 function openAttackModal(target){
   const u=currentPlayer();if(!u)return;
   const tu=players[target];if(!tu)return;
-  // چک محدودیت
   const cd=u.attackCooldowns&&u.attackCooldowns[target];
   if(cd){
     const remain=10*60*1000-(Date.now()-cd);
@@ -645,7 +675,7 @@ function renderNotifications(){
     const div=document.createElement('div');
     div.className='notif '+(n.read?'':'unread')+' '+(n.type||'');
     let txt='';
-    if(n.type==='alliance')txt=`🤝 ${n.from} درخواست اتحاد داد (فقط تو می‌بینی)`;
+    if(n.type==='alliance')txt=`🤝 ${n.from} درخواست اتحاد داد`;
     else if(n.type==='alliance_accepted')txt=`✅ ${n.from} درخواست اتحادت رو قبول کرد`;
     else if(n.type==='alliance_rejected')txt=`❌ ${n.from} درخواست اتحادت رو رد کرد`;
     else if(n.type==='attack')txt=`⚔️ ${n.from} به تو حمله کرد! قدرت: ${faNum(n.power)}`;
@@ -693,7 +723,7 @@ function openDefenseModal(notifId){
   };
 }
 
-document.querySelectorAll('nav.tabs button').forEach(btn=>{btn.onclick=()=>{document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+btn.dataset.tab).classList.add('active');if(btn.dataset.tab==='notif')renderNotifications();if(btn.dataset.tab==='war')renderWar();if(btn.dataset.tab==='home')renderHome();if(btn.dataset.tab==='pm')renderPMList()}});
+document.querySelectorAll('nav.tabs button').forEach(btn=>{btn.onclick=()=>{document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+btn.dataset.tab).classList.add('active');if(btn.dataset.tab==='notif')renderNotifications();if(btn.dataset.tab==='war')renderWar();if(btn.dataset.tab==='home')renderHome();if(btn.dataset.tab==='pm')renderPMList();if(btn.dataset.tab==='board')renderLeaderboard()}});
 
 setInterval(()=>{if(myName&&currentPlayer())renderHome()},30000);
 </script>
