@@ -1,10 +1,13 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const { MongoClient } = require('mongodb');
 
 const app = express();
 app.use(express.json());
+app.use(express.static(__dirname)); // سرو کردن index.html از همین پوشه
+
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -29,6 +32,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const ATTACK_COOLDOWN_MS = 10 * 60 * 1000;
 const PING_TIMEOUT_MS = 2 * 60 * 1000;
 
+// درآمد روزانه هر منبع (باید با index.html هماهنگ باشه)
 const INCOME_ITEMS = {
   farm: 2500, oil_small: 2800, mine: 3200, tourism: 3800,
   gas: 4200, oil_big: 6000, tech: 8000
@@ -106,7 +110,7 @@ async function saveChatToDB(msg) {
   try { await chatCollection.insertOne(msg); } catch (err) { console.error(err.message); }
 }
 
-app.get('/', (req, res) => {
+app.get('/api/status', (req, res) => {
   res.json({
     status: 'ok', message: 'سرور بازی جنگ جهانی روشنه',
     players: Object.keys(gameState.players).length,
