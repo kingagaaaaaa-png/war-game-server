@@ -247,38 +247,86 @@ const CATEGORIES=[
 ];
 
 const ITEMS=[
-{id:'farm',cat:'income',name:'مزرعه بزرگ',emoji:'🌾',desc:'ارزان',price:1000,attack:0,defense:0,dailyIncome:2500},
+// 💵 منابع درآمد
+{id:'farm',cat:'income',name:'مزرعه بزرگ',emoji:'🌾',desc:'ارزان‌ترین',price:1000,attack:0,defense:0,dailyIncome:2500},
 {id:'oil_small',cat:'income',name:'چاه نفت کوچک',emoji:'🛢️',desc:'درآمد بالا',price:1500,attack:0,defense:0,dailyIncome:2800},
 {id:'mine',cat:'income',name:'معدن طلا',emoji:'⛏️',desc:'پایدار',price:1800,attack:0,defense:0,dailyIncome:3200},
 {id:'tourism',cat:'income',name:'مرکز گردشگری',emoji:'🏖️',desc:'خوب',price:2200,attack:0,defense:0,dailyIncome:3800},
 {id:'gas',cat:'income',name:'میدان گاز',emoji:'💨',desc:'خیلی خوب',price:2500,attack:0,defense:0,dailyIncome:4200},
 {id:'oil_big',cat:'income',name:'پالایشگاه',emoji:'🏭',desc:'عالی',price:3500,attack:0,defense:0,dailyIncome:6000},
 {id:'tech',cat:'income',name:'مرکز فناوری',emoji:'💻',desc:'پرسودترین',price:4500,attack:0,defense:0,dailyIncome:8000},
-{id:'mis_short',cat:'missile',name:'موشک کوتاه‌برد',emoji:'🚀',desc:'۳۰۰km',price:700,attack:200,defense:0},
-{id:'mis_medium',cat:'missile',name:'موشک میان‌برد',emoji:'🚀',desc:'۲۰۰۰km',price:1500,attack:420,defense:0},
-{id:'mis_icbm',cat:'missile',name:'موشک قاره‌پیما',emoji:'🚀',desc:'بین‌قاره‌ای',price:3500,attack:900,defense:0},
-{id:'mis_hypersonic',cat:'missile',name:'هایپرسونیک',emoji:'⚡',desc:'غیرقابل رهگیری',price:4500,attack:1200,defense:0},
-{id:'mis_cruise',cat:'missile',name:'موشک کروز',emoji:'🎯',desc:'دقیق',price:1100,attack:320,defense:0},
-{id:'tk_light',cat:'tank',name:'تانک سبک',emoji:'🚙',desc:'کم‌زره',price:500,attack:150,defense:70},
+
+// 🚀 موشک‌ها (۱۰ نوع)
+{id:'mis_short',cat:'missile',name:'موشک بالستیک کوتاه‌برد',emoji:'🚀',desc:'برد ۳۰۰ کیلومتر',price:700,attack:200,defense:0},
+{id:'mis_medium',cat:'missile',name:'موشک بالستیک میان‌برد',emoji:'🚀',desc:'برد ۲۰۰۰ کیلومتر',price:1500,attack:420,defense:0},
+{id:'mis_icbm',cat:'missile',name:'موشک بالستیک قاره‌پیما',emoji:'🚀',desc:'برد بین‌قاره‌ای',price:3500,attack:900,defense:0},
+{id:'mis_hypersonic',cat:'missile',name:'موشک هایپرسونیک',emoji:'⚡',desc:'غیرقابل رهگیری',price:4500,attack:1200,defense:0},
+{id:'mis_cruise',cat:'missile',name:'موشک کروز',emoji:'🎯',desc:'دقیق و ارزان',price:1100,attack:320,defense:0},
+{id:'mis_antiship',cat:'missile',name:'موشک ضدکشتی',emoji:'⚓',desc:'مخصوص نبرد دریایی',price:1800,attack:480,defense:0},
+{id:'mis_airdef',cat:'missile',name:'موشک هوا به هوا',emoji:'🦅',desc:'برای نبرد هوایی',price:1300,attack:380,defense:0},
+{id:'mis_sam',cat:'missile',name:'موشک زمین به هوا',emoji:'📡',desc:'دفاع از آسمان',price:1600,attack:0,defense:400},
+{id:'mis_cluster',cat:'missile',name:'موشک خوشه‌ای',emoji:'💥',desc:'آسیب منطقه‌ای',price:2500,attack:650,defense:0},
+{id:'mis_emp',cat:'missile',name:'موشک الکترومغناطیسی',emoji:'⚡',desc:'از کار انداختن دشمن',price:5000,attack:1400,defense:0},
+
+// 🚜 تانک‌ها (۱۰ نوع)
+{id:'tk_light',cat:'tank',name:'تانک سبک',emoji:'🚙',desc:'سریع',price:500,attack:150,defense:70},
 {id:'tk_medium',cat:'tank',name:'تانک متوسط',emoji:'🚜',desc:'متعادل',price:950,attack:280,defense:130},
 {id:'tk_heavy',cat:'tank',name:'تانک سنگین',emoji:'🚜',desc:'زره‌پوش',price:1700,attack:480,defense:240},
-{id:'tk_mbt',cat:'tank',name:'تانک MBT',emoji:'🛡️',desc:'قوی‌ترین',price:2600,attack:700,defense:320},
+{id:'tk_mbt',cat:'tank',name:'تانک MBT',emoji:'🛡️',desc:'نبرد اصلی',price:2600,attack:700,defense:320},
+{id:'tk_destroyer',cat:'tank',name:'تانک شکن',emoji:'💣',desc:'شکار تانک',price:1900,attack:750,defense:150},
+{id:'tk_antiair',cat:'tank',name:'تانک ضدهوایی',emoji:'🎯',desc:'هدف قرار دادن هواپیما',price:1400,attack:200,defense:450},
+{id:'tk_amphibious',cat:'tank',name:'تانک آبی‌خاکی',emoji:'🌊',desc:'عبور از آب',price:2200,attack:520,defense:280},
+{id:'tk_scout',cat:'tank',name:'تانک شناسایی',emoji:'👁️',desc:'ارزان برای جاسوسی',price:600,attack:100,defense:120},
+{id:'tk_superheavy',cat:'tank',name:'تانک فوق سنگین',emoji:'🏗️',desc:'قلعه متحرک',price:4000,attack:1000,defense:600},
+{id:'tk_railgun',cat:'tank',name:'تانک ریلگان',emoji:'⚡',desc:'فناوری آینده',price:5500,attack:1500,defense:400},
+
+// 🪖 پیاده‌نظام (۱۰ نوع)
 {id:'inf_soldier',cat:'infantry',name:'سرباز',emoji:'🪖',desc:'ارزان',price:200,attack:50,defense:40},
 {id:'inf_ranger',cat:'infantry',name:'تکاور',emoji:'🥷',desc:'آموزش‌دیده',price:550,attack:140,defense:100},
-{id:'inf_marine',cat:'infantry',name:'تفنگدار',emoji:'🌊',desc:'ساحلی',price:800,attack:220,defense:160},
+{id:'inf_marine',cat:'infantry',name:'تفنگدار دریایی',emoji:'🌊',desc:'ساحلی',price:800,attack:220,defense:160},
 {id:'inf_special',cat:'infantry',name:'نیروی ویژه',emoji:'🎖️',desc:'نخبه',price:1400,attack:380,defense:260},
-{id:'navy_frigate',cat:'navy',name:'ناوچه',emoji:'⛵',desc:'کوچک',price:700,attack:180,defense:130},
+{id:'inf_sniper',cat:'infantry',name:'تک‌تیرانداز',emoji:'🎯',desc:'دقیق',price:700,attack:300,defense:50},
+{id:'inf_para',cat:'infantry',name:'چترباز',emoji:'🪂',desc:'حمله از آسمان',price:1000,attack:280,defense:120},
+{id:'inf_mech',cat:'infantry',name:'پیاده مکانیزه',emoji:'🤖',desc:'سرعت بالا',price:1600,attack:400,defense:300},
+{id:'inf_cyber',cat:'infantry',name:'نیروی سایبری',emoji:'💻',desc:'جنگ نرم',price:2000,attack:500,defense:200},
+{id:'inf_heavy',cat:'infantry',name:'مسلسل‌چی سنگین',emoji:'🔫',desc:'آتش پرحجم',price:900,attack:250,defense:80},
+{id:'inf_medic',cat:'infantry',name:'پزشک رزمی',emoji:'🩺',desc:'نجات نیروها',price:1200,attack:50,defense:400},
+
+// 🚢 ناوها (۱۰ نوع)
+{id:'navy_frigate',cat:'navy',name:'ناوچه',emoji:'⛵',desc:'کوچک و سریع',price:700,attack:180,defense:130},
 {id:'navy_destroyer',cat:'navy',name:'ناوشکن',emoji:'🚢',desc:'متوسط',price:1600,attack:420,defense:260},
 {id:'navy_cruiser',cat:'navy',name:'ناو',emoji:'🚢',desc:'قوی',price:2700,attack:720,defense:420},
-{id:'navy_carrier',cat:'navy',name:'ناو هواپیمابر',emoji:'🛳️',desc:'قوی‌ترین',price:5000,attack:1300,defense:750},
-{id:'air_fighter',cat:'airforce',name:'جنگنده',emoji:'🛩️',desc:'سریع و دقیق',price:900,attack:300,defense:0},
-{id:'air_bomber',cat:'airforce',name:'بمب‌افکن',emoji:'💣',desc:'قدرت حمله بالا',price:2000,attack:600,defense:0},
-{id:'air_drone',cat:'airforce',name:'پهپاد',emoji:'🎛️',desc:'ارزان و دقیق',price:400,attack:120,defense:0},
-{id:'air_stealth',cat:'airforce',name:'جنگنده رادارگریز',emoji:'🛸',desc:'نامرئی، فوق‌قدرتمند',price:4200,attack:1000,defense:0},
+{id:'navy_carrier',cat:'navy',name:'ناو هواپیمابر',emoji:'🛳️',desc:'قدرت هوایی',price:5000,attack:1300,defense:750},
+{id:'navy_sub',cat:'navy',name:'زیردریایی',emoji:'🦈',desc:'مخفی',price:3000,attack:800,defense:200},
+{id:'navy_nuclear_sub',cat:'navy',name:'زیردریایی هسته‌ای',emoji:'☢️',desc:'قدرت اتمی',price:6000,attack:1600,defense:500},
+{id:'navy_corvette',cat:'navy',name:'ناوچه سبک',emoji:'🛶',desc:'گشت دریایی',price:450,attack:100,defense:90},
+{id:'navy_battleship',cat:'navy',name:'رزمناو',emoji:'⚓',desc:'توپخانه سنگین',price:4500,attack:1100,defense:600},
+{id:'navy_amphibious',cat:'navy',name:'ناو آبی‌خاکی',emoji:'🚤',desc:'انتقال نیرو',price:2000,attack:300,defense:400},
+{id:'navy_stealth',cat:'navy',name:'ناو رادارگریز',emoji:'👻',desc:'نامرئی',price:3800,attack:950,defense:550},
+
+// ✈️ نیروی هوایی (۱۰ نوع)
+{id:'air_fighter',cat:'airforce',name:'جنگنده',emoji:'🛩️',desc:'درگیری هوایی',price:900,attack:300,defense:0},
+{id:'air_bomber',cat:'airforce',name:'بمب‌افکن',emoji:'💣',desc:'حمله زمینی',price:2000,attack:600,defense:0},
+{id:'air_drone',cat:'airforce',name:'پهپاد',emoji:'🎛️',desc:'ارزان',price:400,attack:120,defense:0},
+{id:'air_stealth',cat:'airforce',name:'جنگنده رادارگریز',emoji:'🛸',desc:'نامرئی',price:4200,attack:1000,defense:0},
+{id:'air_interceptor',cat:'airforce',name:'رهگیر',emoji:'⚡',desc:'دفاع هوایی',price:1500,attack:400,defense:200},
+{id:'air_awacs',cat:'airforce',name:'هواپیمای هشدار',emoji:'📡',desc:'شناسایی',price:2500,attack:100,defense:300},
+{id:'air_transport',cat:'airforce',name:'ترابری',emoji:'📦',desc:'پشتیبانی',price:1200,attack:50,defense:150},
+{id:'air_helicopter',cat:'airforce',name:'بالگرد',emoji:'🚁',desc:'حمله سریع',price:800,attack:220,defense:50},
+{id:'air_stealth_bomber',cat:'airforce',name:'بمب‌افکن رادارگریز',emoji:'🦇',desc:'نابودگر',price:5500,attack:1400,defense:100},
+{id:'air_space',cat:'airforce',name:'هواپیمای فضایی',emoji:'🚀',desc:'آینده',price:8000,attack:2000,defense:500},
+
+// 🛡️ پدافند (۱۰ نوع)
 {id:'def_basic',cat:'defense',name:'سپر پایه',emoji:'🛡️',desc:'ساده',price:400,attack:0,defense:180},
-{id:'def_antiair',cat:'defense',name:'پدافند هوایی',emoji:'🎯',desc:'ضد موشک و هواپیما',price:1000,attack:0,defense:380},
+{id:'def_antiair',cat:'defense',name:'پدافند هوایی',emoji:'🎯',desc:'ضد موشک',price:1000,attack:0,defense:380},
 {id:'def_advanced',cat:'defense',name:'پدافند پیشرفته',emoji:'🛰️',desc:'S-400',price:2200,attack:0,defense:800},
-{id:'def_bunker',cat:'defense',name:'سنگر فرماندهی',emoji:'🏰',desc:'سنگین',price:1800,attack:0,defense:650}
+{id:'def_bunker',cat:'defense',name:'سنگر فرماندهی',emoji:'🏰',desc:'سنگین',price:1800,attack:0,defense:650},
+{id:'def_iron_dome',cat:'defense',name:'گنبد آهنین',emoji:'🕸️',desc:'دفاع شهری',price:3000,attack:0,defense:1000},
+{id:'def_laser',cat:'defense',name:'پدافند لیزری',emoji:'🔦',desc:'دقت بالا',price:4000,attack:0,defense:1300},
+{id:'def_emp',cat:'defense',name:'سپر الکترومغناطیسی',emoji:'⚡',desc:'ضد الکترونیک',price:2500,attack:0,defense:850},
+{id:'def_mine',cat:'defense',name:'میدان مین',emoji:'💣',desc:'تله زمینی',price:600,attack:0,defense:300},
+{id:'def_cyber',cat:'defense',name:'دفاع سایبری',emoji:'💻',desc:'جنگ نرم',price:2000,attack:0,defense:700},
+{id:'def_plasma',cat:'defense',name:'سپر پلاسما',emoji:'🔮',desc:'فناوری برتر',price:6000,attack:0,defense:2000}
 ];
 
 const COUNTRIES=[
