@@ -192,6 +192,7 @@ nav.tabs button .badge{background:var(--red);color:#fff;border-radius:20px;paddi
           <div class="val" id="incomeTotal">۰</div>
           <div class="next" id="incomeNext">-</div>
         </div>
+        <button class="btn" id="btnClaimIncome" style="width:100%;margin-top:10px">💰 دریافت درآمد امروز</button>
       </div>
     </div>
     <div class="card"><h3>🏠 کشورهای من</h3><div id="homeTerritories" class="grid2"></div></div>
@@ -554,6 +555,24 @@ function renderHome(){
   const remain=Math.max(0,DAY-elapsed);
   const h=Math.floor(remain/(60*60*1000));const m=Math.floor((remain%(60*60*1000))/(60*1000));
   document.getElementById('incomeNext').textContent=income>0?`تا واریز بعدی: ${h} ساعت و ${m} دقیقه`:'هنوز منبع درآمدی نداری';
+  
+  const claimBtn = document.getElementById('btnClaimIncome');
+  if (claimBtn) {
+    if (income <= 0) {
+      claimBtn.disabled = true;
+      claimBtn.textContent = '❌ منبع درآمدی نداری';
+      claimBtn.style.opacity = '0.5';
+    } else if (remain <= 0 || (myName === 'فرهان' && !u.hasReceivedException)) {
+      claimBtn.disabled = false;
+      claimBtn.textContent = '💰 دریافت درآمد امروز';
+      claimBtn.style.opacity = '1';
+    } else {
+      claimBtn.disabled = true;
+      claimBtn.textContent = `⏳ ${h} ساعت و ${m} دقیقه دیگه`;
+      claimBtn.style.opacity = '0.5';
+    }
+  }
+
   const ter=document.getElementById('homeTerritories');ter.innerHTML='';
   if(!u.countries||u.countries.length===0){ter.innerHTML='<div class="empty">هنوز کشوری نداری</div>'}
   else{u.countries.forEach((cid,idx)=>{const c=getCountry(cid);if(!c)return;const d=document.createElement('div');d.className='inv-item';d.innerHTML=`<div class="e">${c.flag}</div><div class="n">${c.name}${idx===0?' (اصلی)':''}</div>`;ter.appendChild(d)})}
@@ -855,6 +874,14 @@ function openDefenseModal(notifId){
 }
 
 document.querySelectorAll('nav.tabs button').forEach(btn=>{btn.onclick=()=>{document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+btn.dataset.tab).classList.add('active');if(btn.dataset.tab==='notif')renderNotifications();if(btn.dataset.tab==='war')renderWar();if(btn.dataset.tab==='home')renderHome();if(btn.dataset.tab==='pm')renderPMList();if(btn.dataset.tab==='board')renderLeaderboard()}});
+
+document.getElementById('btnClaimIncome').onclick = () => {
+  if (socket && socket.connected) {
+    socket.emit('claim_income');
+  } else {
+    toast('اتصال به سرور برقرار نیست!');
+  }
+};
 
 setInterval(()=>{if(myName&&currentPlayer())renderHome()},30000);
 </script>
