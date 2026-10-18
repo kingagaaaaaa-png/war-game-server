@@ -31,13 +31,21 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const ATTACK_COOLDOWN_MS = 10 * 60 * 1000;
 const PING_TIMEOUT_MS = 2 * 60 * 1000;
 
-// درآمد روزانه هر منبع واقعی
+// ==========================================
+// ⚠️ اینجا هم منابع جدید و هم منابع قبلی هست
+// تا کسی که قبلاً مزرعه خریده هم درآمد بگیره
+// ==========================================
 const INCOME_ITEMS = {
+  // --- منابع جدید (واقعی) ---
   south_pars: 2500, ghawar: 2800, silicon_valley: 3200, wall_street: 3800,
   dubai_tourism: 4200, aramco: 6000, tokyo_exchange: 8000, london_financial: 3500,
   south_africa_gold: 3000, amazon_resources: 2800, australia_iron: 2600, canada_oil: 3200,
   panama_canal: 4500, suez_canal: 4800, swiss_banks: 5000, russia_gas: 4000,
-  china_manufacturing: 5500, india_it: 3500, german_auto: 4000, french_luxury: 3800
+  china_manufacturing: 5500, india_it: 3500, german_auto: 4000, french_luxury: 3800,
+  
+  // --- منابع قبلی (برای اینکه درآمد کسی قطع نشه) ---
+  farm: 2500, oil_small: 2800, mine: 3200, tourism: 3800,
+  gas: 4200, oil_big: 6000, tech: 8000
 };
 
 async function connectMongoDB() {
@@ -398,6 +406,7 @@ async function processDailyIncome() {
     const elapsed = now - p.lastIncomeTime;
     if (elapsed < DAY_MS) continue;
     let incomePerDay = 0;
+    // اینجا چک میکنه اگه آیتم توی INCOME_ITEMS باشه (چه جدید چه قدیم)
     for (const id in p.inventory || {}) {
       if (INCOME_ITEMS[id]) incomePerDay += INCOME_ITEMS[id] * p.inventory[id];
     }
