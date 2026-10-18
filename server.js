@@ -1,12 +1,11 @@
 const express = require('express');
 const http = require('http');
-const path = require('path');
 const { Server } = require('socket.io');
 const { MongoClient } = require('mongodb');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(__dirname)); // سرو کردن index.html از همین پوشه
+app.use(express.static(__dirname));
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -32,10 +31,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const ATTACK_COOLDOWN_MS = 10 * 60 * 1000;
 const PING_TIMEOUT_MS = 2 * 60 * 1000;
 
-// درآمد روزانه هر منبع (باید با index.html هماهنگ باشه)
+// درآمد روزانه هر منبع واقعی
 const INCOME_ITEMS = {
-  farm: 2500, oil_small: 2800, mine: 3200, tourism: 3800,
-  gas: 4200, oil_big: 6000, tech: 8000
+  south_pars: 2500, ghawar: 2800, silicon_valley: 3200, wall_street: 3800,
+  dubai_tourism: 4200, aramco: 6000, tokyo_exchange: 8000, london_financial: 3500,
+  south_africa_gold: 3000, amazon_resources: 2800, australia_iron: 2600, canada_oil: 3200,
+  panama_canal: 4500, suez_canal: 4800, swiss_banks: 5000, russia_gas: 4000,
+  china_manufacturing: 5500, india_it: 3500, german_auto: 4000, french_luxury: 3800
 };
 
 async function connectMongoDB() {
@@ -57,12 +59,9 @@ function getPublicPlayers() {
   for (const name in gameState.players) {
     const p = gameState.players[name];
     out[name] = {
-      name: p.name, money: p.money,
-      countries: p.countries || [],
-      inventory: p.inventory || {},
-      allies: p.allies || [],
-      online: p.online,
-      lastIncomeTime: p.lastIncomeTime,
+      name: p.name, money: p.money, countries: p.countries || [],
+      inventory: p.inventory || {}, allies: p.allies || [],
+      online: p.online, lastIncomeTime: p.lastIncomeTime,
       attackCooldowns: p.attackCooldowns || {}
     };
   }
@@ -133,8 +132,7 @@ io.on('connection', (socket) => {
       const newPlayer = {
         name, password, money: 16000, countries: [], inventory: {},
         allies: [], notifications: [], online: true,
-        lastIncomeTime: Date.now(),
-        attackCooldowns: {}, privateMessages: []
+        lastIncomeTime: Date.now(), attackCooldowns: {}, privateMessages: []
       };
       gameState.players[name] = newPlayer;
       if (socket.playerName) delete playerSockets[socket.playerName];
