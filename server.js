@@ -31,12 +31,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const ATTACK_COOLDOWN_MS = 10 * 60 * 1000;
 const PING_TIMEOUT_MS = 2 * 60 * 1000;
 
-// درآمد روزانه (همه‌ی آیتم‌های قدیمی و جدید)
 const INCOME_ITEMS = {
-  // آیتم‌های قدیمی (برای حفظ درآمد فرهان و بقیه)
   income: 2500, farm: 2500, oil_small: 2800, mine: 3200, tourism: 3800,
   gas: 4200, oil_big: 6000, tech: 8000,
-  // آیتم‌های جدید واقعی
   south_pars: 2500, ghawar: 2800, silicon_valley: 3200, wall_street: 3800,
   dubai_tourism: 4200, aramco: 6000, tokyo_exchange: 8000, london_financial: 3500,
   south_africa_gold: 3000, amazon_resources: 2800, australia_iron: 2600, canada_oil: 3200,
@@ -165,6 +162,55 @@ io.on('connection', (socket) => {
     socket.emit('my_private_messages', existing.privateMessages);
     io.emit('players', getPublicPlayers());
     socket.emit('chat_history', gameState.chat);
+  });
+
+  // 💰 دریافت درآمد با قانون ۲۴ ساعت
+  socket.on('claim_income', async () => {
+    const p = gameState.players[socket.playerName];
+    if (!p) return;
+
+    // ✨ استثنا برای فرهان (فقط یکبار) ✨
+    if (socket.playerName === 'فرهان' && !p.hasReceivedException) {
+      let incomePerDay = 0;
+      for (const id in p.inventory || {}) {
+        if (INCOME_ITEMS[id]) incomePerDay += INCOME_ITEMS[id] * p.inventory[id];
+      }
+      if (incomePerDay > 0) {
+        p.money += incomePerDay;
+        p.lastIncomeTime = Date.now();
+        p.hasReceivedException = true; // دیگه تکرار نمیشه
+        await savePlayerToDB(p);
+        io.emit('players', getPublicPlayers());
+        socket.emit('error_msg', '💰 استثنا: ' + incomePerDay.toLocaleString('fa-IR') + ' میلیارد درآمد واریز شد!');
+        return;
+      }
+    }
+
+    // قانون عادی ۲۴ ساعت
+    const now = Date.now();
+    const elapsed = now - (p.lastIncomeTime || now);
+    if (elapsed < DAY_MS) {
+      const remain = DAY_MS - elapsed;
+      const h = Math.floor(remain / (60 * 60 * 1000));
+      const m = Math.floor((remain % (60 * 60 * 1000)) / (60 * 1000));
+      const s = Math.floor((remain % (60 * 1000)) / 1000);
+      socket.emit('error_msg', `شما باید ${h} ساعت و ${m} دقیقه و ${s} ثانیه دیگه صبر کنید!`);
+      return;
+    }
+
+    let incomePerDay = 0;
+    for (const id in p.inventory || {}) {
+      if (INCOME_ITEMS[id]) incomePerDay += INCOME_ITEMS[id] * p.inventory[id];
+    }
+    if (incomePerDay > 0) {
+      p.money += incomePerDay;
+      p.lastIncomeTime = now;
+      await savePlayerToDB(p);
+      io.emit('players', getPublicPlayers());
+      socket.emit('error_msg', '💰 ' + incomePerDay.toLocaleString('fa-IR') + ' میلیارد درآمد واریز شد!');
+    } else {
+      socket.emit('error_msg', 'شما هیچ منبع درآمدی ندارید!');
+    }
   });
 
   socket.on('ping', () => {
