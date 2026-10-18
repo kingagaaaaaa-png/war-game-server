@@ -247,7 +247,17 @@ const CATEGORIES=[
 ];
 
 const ITEMS=[
-// 💵 منابع درآمد (۲۰ تا)
+// --- آیتم‌های قدیمی (مخفی از بازار، برای حفظ درآمد بازیکنان قبلی) ---
+{id:'income',cat:'income',name:'منبع درآمد (قدیمی)',emoji:'💵',desc:'منبع قدیمی',price:2000,attack:0,defense:0,dailyIncome:2500,hidden:true},
+{id:'farm',cat:'income',name:'مزرعه بزرگ (قدیمی)',emoji:'🌾',desc:'ارزان',price:1000,attack:0,defense:0,dailyIncome:2500,hidden:true},
+{id:'oil_small',cat:'income',name:'چاه نفت کوچک (قدیمی)',emoji:'🛢️',desc:'درآمد بالا',price:1500,attack:0,defense:0,dailyIncome:2800,hidden:true},
+{id:'mine',cat:'income',name:'معدن طلا (قدیمی)',emoji:'⛏️',desc:'پایدار',price:1800,attack:0,defense:0,dailyIncome:3200,hidden:true},
+{id:'tourism',cat:'income',name:'مرکز گردشگری (قدیمی)',emoji:'🏖️',desc:'خوب',price:2200,attack:0,defense:0,dailyIncome:3800,hidden:true},
+{id:'gas',cat:'income',name:'میدان گاز (قدیمی)',emoji:'💨',desc:'خیلی خوب',price:2500,attack:0,defense:0,dailyIncome:4200,hidden:true},
+{id:'oil_big',cat:'income',name:'پالایشگاه (قدیمی)',emoji:'🏭',desc:'عالی',price:3500,attack:0,defense:0,dailyIncome:6000,hidden:true},
+{id:'tech',cat:'income',name:'مرکز فناوری (قدیمی)',emoji:'💻',desc:'پرسودترین',price:4500,attack:0,defense:0,dailyIncome:8000,hidden:true},
+
+// --- منابع جدید (واقعی) ---
 {id:'south_pars',cat:'income',name:'میدان گاز پارس جنوبی',emoji:'💨',desc:'ایران/قطر',price:2500,attack:0,defense:0,dailyIncome:2500},
 {id:'ghawar',cat:'income',name:'میدان نفتی غوار',emoji:'🛢️',desc:'عربستان',price:2800,attack:0,defense:0,dailyIncome:2800},
 {id:'silicon_valley',cat:'income',name:'سیلیکون ولی',emoji:'💻',desc:'آمریکا',price:3200,attack:0,defense:0,dailyIncome:3200},
@@ -567,7 +577,7 @@ function renderMarket(){
   const u=currentPlayer();if(!u)return;
   const list=document.getElementById('marketList');list.innerHTML='';
   CATEGORIES.forEach(cat=>{
-    const items=ITEMS.filter(it=>it.cat===cat.id);
+    const items=ITEMS.filter(it=>it.cat===cat.id && !it.hidden);
     if(items.length===0)return;
     const header=document.createElement('div');header.className='cat-header';
     header.innerHTML=`<span>${cat.emoji}</span><span>${cat.name}</span><span class="count">${items.length}</span>`;
